@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
 import { Home, Search, Plus, User, Image, MessageCircle} from 'lucide-react';
 import './HomePage.css';
+import type { Post } from '../types/Post';
 
-interface Post {
-  id: string;
-  username: string;
-  timestamp: string;
-  avatar: string;
-  isFollowing: boolean;
-  hasImage: boolean;
-  description: string;
-}
 
 const HomePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
