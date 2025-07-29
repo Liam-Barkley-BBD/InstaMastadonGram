@@ -1,0 +1,35 @@
+{
+  "name": "instamastadongram",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.ts",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Liam-Barkley-BBD/InstaMastadonGram.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Liam-Barkley-BBD/InstaMastadonGram/issues"
+  },
+  "homepage": "https://github.com/Liam-Barkley-BBD/InstaMastadonGram#readme",
+  "dependencies": {
+    "@deno/kv": "^0.10.0",
+    "@fedify/fedify": "^1.7.7",
+    "@hono/node-server": "^1.17.1",
+    "@logtape/logtape": "^1.0.4",
+    "dotenv": "^17.2.1",
+    "typescript": "^5.8.3",
+    "x-forwarded-fetch": "^0.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "tsx": "^4.20.3"
+  }
+}
