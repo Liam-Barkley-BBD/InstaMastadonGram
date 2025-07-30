@@ -5,6 +5,10 @@
   background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e293b 100%);
 }
 
+.main-content {
+  margin-left: 280px;
+}
+
 /* Sidebar Styles */
 .beegram-sidebar {
   width: 280px;
@@ -392,6 +396,7 @@
   
   .main-content {
     padding-bottom: 80px;
+    padding-left: 0;
   }
   
   .beegram-mobile-header {

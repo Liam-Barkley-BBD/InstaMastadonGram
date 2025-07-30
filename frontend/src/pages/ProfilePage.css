@@ -1,0 +1,347 @@
+/* Profile Page Specific Styles - Override app constraints */
+
+/* CRITICAL: Override the main-content-inner width constraint for profile pages */
+.main-content:has(.profile-page) .main-content-inner,
+.main-content-inner.profile-container {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 2rem !important;
+}
+
+/* Alternative approach if :has() doesn't work in your browser */
+body.profile-view .main-content-inner {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 2rem !important;
+}
+
+.profile-page {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+.profile-header h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.back-button,
+.menu-button {
+  background: none;
+  border: none;
+  color: #fb923c;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover,
+.menu-button:hover {
+  background-color: rgba(251, 146, 60, 0.2);
+  transform: scale(1.1);
+}
+
+/* Profile content */
+.profile-content {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 20px;
+  padding: 3rem 2rem;
+  width: 100%;
+}
+
+.profile-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-large {
+  width: 8rem;
+  height: 8rem;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+  border: 3px solid rgba(139, 92, 246, 0.5);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+}
+
+.profile-details {
+  flex: 1;
+}
+
+.profile-details h1 {
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.username {
+  color: #c084fc;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.stats {
+  display: flex;
+  gap: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  min-width: 100px;
+}
+
+.stat strong {
+  font-size: 1.4rem;
+  margin-bottom: 0.2rem;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.stat span {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.bio {
+  margin-bottom: 1.5rem;
+}
+
+.bio p {
+  margin-bottom: 0.3rem;
+  color: #e5e7eb;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.follow-button {
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+}
+
+.follow-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+}
+
+.message-button {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
+}
+
+.message-button:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.8);
+  transform: translateY(-1px);
+}
+
+.profile-icons {
+  display: flex;
+  gap: 1rem;
+}
+
+.icon-button {
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #fb923c;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.icon-button:hover {
+  background: rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+/* Gallery */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.gallery-item {
+  aspect-ratio: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2);
+  cursor: pointer;
+}
+
+/* Large screens - use more columns */
+@media (min-width: 1200px) {
+  .main-content:has(.profile-page) .main-content-inner,
+  .main-content-inner.profile-container,
+  body.profile-view .main-content-inner {
+    padding: 3rem !important;
+  }
+  
+  .profile-content {
+    padding: 4rem 3rem;
+  }
+  
+  .avatar-large {
+    width: 10rem;
+    height: 10rem;
+    font-size: 3rem;
+  }
+  
+  .profile-info {
+    gap: 4rem;
+  }
+  
+  .profile-details h1 {
+    font-size: 2.5rem;
+  }
+  
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* Medium screens */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 767px) {
+  .main-content:has(.profile-page) .main-content-inner,
+  .main-content-inner.profile-container,
+  body.profile-view .main-content-inner {
+    padding: 1rem !important;
+  }
+
+  
+  
+  .profile-content {
+    padding: 1.5rem 1rem;
+  }
+  
+  .profile-info {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2rem;
+  }
+  
+  .stats {
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .stat {
+    min-width: 70px;
+    padding: 0.75rem;
+  }
+  
+  .actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .follow-button,
+  .message-button {
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .profile-icons {
+    justify-content: center;
+  }
+  
+  .gallery-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .avatar-large {
+    width: 6rem;
+    height: 6rem;
+    font-size: 2rem;
+  }
+  
+  .profile-details h1 {
+    font-size: 1.8rem;
+  }
+}
