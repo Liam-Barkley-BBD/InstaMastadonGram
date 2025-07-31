@@ -1,9 +1,11 @@
 import React from 'react';
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Home, Search, Plus, User } from 'lucide-react';
+import UploadMediaPage from './pages/Uploadpage';
 import HomePage from "./pages/HomePage";
 import Login from './pages/LoginPage';
 import ProfilePage from "./pages/ProfilePage";
+import SearchUsersPage from './pages/SearchUsers';
 import './App.css';
 
 function App() {
