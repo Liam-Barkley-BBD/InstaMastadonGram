@@ -3,7 +3,6 @@ import session from "express-session";
 import passport from "passport";
 import authRoutes from "./routes/auth.routes.ts";
 import federation from "./services/federation.ts";
-import mongoose from "mongoose";
 import { integrateFederation } from "@fedify/express";
 import "./config/passport";
 import dotenv from "dotenv";
