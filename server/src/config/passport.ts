@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/user.model.ts";
+import Actor from "../models/actor.model.ts";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -27,7 +28,21 @@ passport.use(
         name: profile.displayName,
         email: profile.emails?.[0]?.value,
       });
+      
+      const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
+      const sanitizedHandle = baseHandle
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase() + '_' + profile.id.slice(-7);
+
+      const actor = new Actor({
+        uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
+        inboxUri: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
+        handle: sanitizedHandle
+      });
+      
+      await actor.save();
       await user.save();
+      
       done(null, user);
     }
   )
