@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import mongoose, { Schema } from 'mongoose';
 
 const ActorSchema = new Schema({
@@ -74,3 +75,14 @@ ActorSchema.methods.toActivityPubPerson = function() {
 const Actor = mongoose.model('Actor', ActorSchema);
 
 export default Actor;
+=======
+import mongoose from "mongoose";
+
+const actorSchema = new mongoose.Schema({
+  uri: String,
+  inboxUri: String,
+  handle: String,
+});
+
+export default mongoose.model("Actor", actorSchema);
+>>>>>>> 61dff2e (added actor integration with db)

@@ -28,25 +28,21 @@ passport.use(
         name: profile.displayName,
         email: profile.emails?.[0]?.value,
       });
-      await user.save();
-
+      
       const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
       const sanitizedHandle = baseHandle
         .replace(/[^a-zA-Z0-9_]/g, '_')
         .toLowerCase() + '_' + profile.id.slice(-7);
-      
-      const actor = new Actor({
-        userId: user._id,
-        uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
-        handle: sanitizedHandle,
-        name: profile.displayName,
-        inboxUrl: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
-        sharedInboxUrl: `${process.env.DOMAIN}/inbox`,
-        url: `${process.env.DOMAIN}/@${sanitizedHandle}`,
-        summary: null
-      });
-      await actor.save();
 
+      const actor = new Actor({
+        uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
+        inboxUri: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
+        handle: sanitizedHandle
+      });
+      
+      await actor.save();
+      await user.save();
+      
       done(null, user);
     }
   )
