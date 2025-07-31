@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Home, Search, Plus, User } from 'lucide-react';
 import HomePage from "./pages/HomePage";

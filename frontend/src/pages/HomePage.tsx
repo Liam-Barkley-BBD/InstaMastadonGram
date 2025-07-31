@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Image, MessageCircle } from 'lucide-react';
-import './HomePage.css';
 import type { Post } from '../types/Post';
+import './HomePage.css';
 
 const HomePage: React.FC = () => {
   const [posts] = useState<Post[]>([
