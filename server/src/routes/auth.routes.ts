@@ -9,7 +9,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     failureRedirect: "/login",
-    successRedirect: "/", // TODO: redirect to frontend feed page
+    successRedirect: process.env.FRONTEND_URI,
   })
 );
 
