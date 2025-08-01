@@ -1,4 +1,15 @@
-import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, Person, Undo, type Recipient } from "@fedify/fedify";
+import {
+  Accept,
+  Create,
+  createFederation,
+  Endpoints,
+  Follow,
+  getActorHandle,
+  importJwk,
+  Person,
+  Undo,
+  type Recipient,
+} from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
@@ -20,7 +31,7 @@ federation
     const actor = await findUserByHandle(identifier);
 
     if (!actor) return null;
-    else console.log("Found user!")
+    else console.log("Found user!");
 
     const keys = await ctx.getActorKeyPairs(identifier);
     return new Person({
@@ -31,7 +42,7 @@ federation
       publicKey: keys[0].cryptographicKey,
       // For the assertionMethods property, we use all Multikey instances:
       assertionMethods: keys.map((key) => key.multikey),
-      inbox: ctx.getInboxUri(identifier,),
+      inbox: ctx.getInboxUri(identifier),
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
       }),
@@ -46,7 +57,7 @@ federation
 
   .setKeyPairsDispatcher(async (ctx, identifier) => {
     const actor = await findUserByHandle(identifier);
-    if (actor == null) return [];  // Return null if the key pair is not found.
+    if (actor == null) return []; // Return null if the key pair is not found.
 
     const keyPairs = [];
 
@@ -109,7 +120,7 @@ federation
         name: follower.name?.toString() || followerHandle,
         inboxUri: follower.inboxId.href,
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
     // Save the follow relationship (if not already stored)
@@ -162,9 +173,13 @@ federation
     });
 
     if (deleted) {
-      logger.info(`Removed follow from ${followerActor.handle} to ${followingActor.handle}`);
+      logger.info(
+        `Removed follow from ${followerActor.handle} to ${followingActor.handle}`,
+      );
     } else {
-      logger.debug(`No follow found to remove from ${followerActor.handle} to ${followingActor.handle}`);
+      logger.debug(
+        `No follow found to remove from ${followerActor.handle} to ${followingActor.handle}`,
+      );
     }
   })
 
@@ -184,36 +199,41 @@ federation
   });
 
 federation
-  .setFollowersDispatcher("/users/{identifier}/followers", async (ctx, identifier, cursor) => {
-    const followingActor = await Actor.findOne({ handle: identifier });
-    if (!followingActor) return { items: [] };
+  .setFollowersDispatcher(
+    "/users/{identifier}/followers",
+    async (ctx, identifier, cursor) => {
+      const followingActor = await Actor.findOne({ handle: identifier });
+      if (!followingActor) return { items: [] };
 
-    const follows = await FollowModel.find({ following: followingActor._id }).populate<{
-      follower: ActorDoc;
-    }>("follower");
+      const follows = await FollowModel.find({
+        following: followingActor._id,
+      }).populate<{
+        follower: ActorDoc;
+      }>("follower");
 
-    const items: Recipient[] = follows.map((follow) => {
-      const follower = follow.follower;
-      return {
-        id: follower?.uri ? new URL(follower.uri) : null,
-        inboxId: follower?.inboxUri ? new URL(follower.inboxUri) : null,
-        endpoints: follower?.sharedInboxUri
-          ? { sharedInbox: new URL(follower.sharedInboxUri) }
-          : null,
-      };
-    });
+      const items: Recipient[] = follows.map((follow) => {
+        const follower = follow.follower;
+        return {
+          id: follower?.uri ? new URL(follower.uri) : null,
+          inboxId: follower?.inboxUri ? new URL(follower.inboxUri) : null,
+          endpoints: follower?.sharedInboxUri
+            ? { sharedInbox: new URL(follower.sharedInboxUri) }
+            : null,
+        };
+      });
 
-    return { items };
-  })
+      return { items };
+    },
+  )
 
   .setCounter(async (ctx, identifier) => {
     const followingActor = await Actor.findOne({ handle: identifier });
     if (!followingActor) return 0;
 
-    const count = await FollowModel.countDocuments({ following: followingActor._id });
+    const count = await FollowModel.countDocuments({
+      following: followingActor._id,
+    });
     return count;
   });
-
-
 
 export default federation;

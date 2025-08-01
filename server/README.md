@@ -31,7 +31,7 @@ GET http://localhost:8000/users/test
 2. **Add the HTTP Header:**
 
 | Key    | Value                     |
-|--------|---------------------------|
+| ------ | ------------------------- |
 | Accept | application/activity+json |
 
 3. **Send the request**
