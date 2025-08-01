@@ -2,6 +2,7 @@ import express from "express";
 import session from "express-session";
 import passport from "passport";
 import authRoutes from "./routes/auth.routes.ts";
+import postRoutes from "./routes/post.routes.ts"
 import federation from "./services/federation.ts";
 import { integrateFederation } from "@fedify/express";
 import "./config/passport";
@@ -13,6 +14,9 @@ dotenv.config();
 const app = express();
 
 app.set("trust proxy", true);
+
+app.use(integrateFederation(federation, (req) => undefined));
+
 app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET!,
@@ -28,8 +32,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/auth", authRoutes);
-
-app.use(integrateFederation(federation, (req) => undefined));
+app.use("/posts", postRoutes)
 
 app.get("/", (req, res) => {
   res.send("Hello, Fedify + Google Auth!");
