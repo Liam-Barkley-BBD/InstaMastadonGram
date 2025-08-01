@@ -7,7 +7,7 @@ import {
   Users2,
   Verified,
 } from "lucide-react";
-import "./SearchUsers.css";
+import "./styles/SearchUsers.css";
 
 const SearchUsersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");

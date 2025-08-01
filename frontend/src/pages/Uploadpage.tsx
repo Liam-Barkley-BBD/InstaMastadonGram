@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Upload, X, Image, Video, Camera, Smile } from "lucide-react";
-import "./Uploadpage.css";
+import "./styles/Uploadpage.css";
 
 const UploadMediaPage = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);

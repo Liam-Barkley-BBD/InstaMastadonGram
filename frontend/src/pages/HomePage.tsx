@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Image, MessageCircle } from "lucide-react";
-import "./HomePage.css";
+import "..styles/HomePage.css";
 import type { Post } from "../types/Post";
 
 const HomePage: React.FC = () => {
