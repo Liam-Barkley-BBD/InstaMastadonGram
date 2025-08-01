@@ -1,10 +1,10 @@
+import mongoose from "mongoose";
 import app from "./app.ts";
 import "./utils/loggers.ts";
-import { client } from "./utils/mongo.ts";
 
 const PORT = 8000;
 
-client.connect()
+mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/instaMastadonGram")
   .then(() => {
     console.log("MongoDB connected");
     app.listen(PORT, () => {
