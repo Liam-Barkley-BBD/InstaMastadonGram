@@ -29,11 +29,13 @@ passport.use(
         name: profile.displayName,
         email: profile.emails?.[0]?.value,
       });
-      
-      const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
-      const sanitizedHandle = baseHandle
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase() + '_' + profile.id.slice(-7);
+
+      const baseHandle =
+        profile.emails?.[0]?.value?.split("@")[0] || `user${user._id}`;
+      const sanitizedHandle =
+        baseHandle.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase() +
+        "_" +
+        profile.id.slice(-7);
 
       const rsaPair = await generateCryptoKeyPair("RSASSA-PKCS1-v1_5");
       const ed25519Pair = await generateCryptoKeyPair("Ed25519");
@@ -59,10 +61,10 @@ passport.use(
           },
         },
       });
-      
+
       await actor.save();
       await user.save();
-      
+
       done(null, user);
     },
   ),
