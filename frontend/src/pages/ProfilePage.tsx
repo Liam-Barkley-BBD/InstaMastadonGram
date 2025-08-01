@@ -1,12 +1,10 @@
-import React from 'react';
-import './ProfilePage.css';
+import React from "react";
+import "./ProfilePage.css";
 
 const ProfilePage = () => {
   return (
     <div className="main-content-inner profile-container">
-
-    
-    <main className="profile-page">
+      <main className="profile-page">
         <header className="profile-header">
           <button className="back-button">‹</button>
           <h2>darlene_beats</h2>
@@ -18,11 +16,11 @@ const ProfilePage = () => {
             <figure className="profile-avatar">
               <span className="avatar-large"></span>
             </figure>
-            
+
             <div className="profile-details">
               <h1>Darlene Beats</h1>
               <p className="username">@darlene_beats</p>
-              
+
               <div className="stats">
                 <div className="stat">
                   <strong>360</strong>
@@ -37,12 +35,12 @@ const ProfilePage = () => {
                   <span>Following</span>
                 </div>
               </div>
-              
+
               <div className="bio">
                 <p>Digital creator & photographer</p>
                 <p>Living life one adventure at a time</p>
               </div>
-              
+
               <div className="actions">
                 <button className="follow-button">Follow</button>
               </div>
@@ -60,7 +58,7 @@ const ProfilePage = () => {
             </div>
           </section>
         </article>
-    </main>
+      </main>
     </div>
   );
 };

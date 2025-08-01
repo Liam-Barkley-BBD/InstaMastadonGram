@@ -252,25 +252,25 @@ body.profile-view .main-content-inner {
   body.profile-view .main-content-inner {
     padding: 3rem !important;
   }
-  
+
   .profile-content {
     padding: 4rem 3rem;
   }
-  
+
   .avatar-large {
     width: 10rem;
     height: 10rem;
     font-size: 3rem;
   }
-  
+
   .profile-info {
     gap: 4rem;
   }
-  
+
   .profile-details h1 {
     font-size: 2.5rem;
   }
-  
+
   .gallery-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1.25rem;
@@ -292,55 +292,53 @@ body.profile-view .main-content-inner {
     padding: 1rem !important;
   }
 
-  
-  
   .profile-content {
     padding: 1.5rem 1rem;
   }
-  
+
   .profile-info {
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 2rem;
   }
-  
+
   .stats {
     gap: 1rem;
     justify-content: center;
   }
-  
+
   .stat {
     min-width: 70px;
     padding: 0.75rem;
   }
-  
+
   .actions {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .follow-button,
   .message-button {
     width: 100%;
     max-width: 200px;
   }
-  
+
   .profile-icons {
     justify-content: center;
   }
-  
+
   .gallery-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
   }
-  
+
   .avatar-large {
     width: 6rem;
     height: 6rem;
     font-size: 2rem;
   }
-  
+
   .profile-details h1 {
     font-size: 1.8rem;
   }

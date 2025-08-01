@@ -8,8 +8,16 @@ await configure({
   },
   filters: {},
   loggers: [
-    { category: "insta-mastadon-gram", lowestLevel: "debug", sinks: ["console"] },
+    {
+      category: "insta-mastadon-gram",
+      lowestLevel: "debug",
+      sinks: ["console"],
+    },
     { category: "fedify", lowestLevel: "info", sinks: ["console"] },
-    { category: ["logtape", "meta"], lowestLevel: "warning", sinks: ["console"] },
+    {
+      category: ["logtape", "meta"],
+      lowestLevel: "warning",
+      sinks: ["console"],
+    },
   ],
 });
