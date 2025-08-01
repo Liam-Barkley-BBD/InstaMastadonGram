@@ -46,6 +46,7 @@ passport.use(
       const actor = new Actor({
         uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
         inboxUri: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
+        sharedInboxUri: `${process.env.DOMAIN}/inbox`,
         handle: sanitizedHandle,
         keys: {
           rsa: {

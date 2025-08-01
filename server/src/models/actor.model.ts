@@ -1,19 +1,38 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Model, Schema } from "mongoose";
 
-const actorSchema = new mongoose.Schema({
-  uri: String,
-  inboxUri: String,
-  handle: String,
+export interface ActorDoc extends Document {
+  uri: string;
+  inboxUri: string;
+  handle: string;
+  sharedInboxUri?: string;
+  keys?: {
+    rsa?: {
+      publicKey: Record<string, any>;
+      privateKey: Record<string, any>;
+    };
+    ed25519?: {
+      publicKey: Record<string, any>;
+      privateKey: Record<string, any>;
+    };
+  };
+}
+
+const actorSchema = new Schema<ActorDoc>({
+  uri: { type: String, required: true },
+  inboxUri: { type: String, required: true },
+  handle: { type: String, required: true },
+  sharedInboxUri: { type: String },
   keys: {
     rsa: {
-      publicKey: Object,
-      privateKey: Object,
+      publicKey: { type: Schema.Types.Mixed },
+      privateKey: { type: Schema.Types.Mixed },
     },
     ed25519: {
-      publicKey: Object,
-      privateKey: Object,
+      publicKey: { type: Schema.Types.Mixed },
+      privateKey: { type: Schema.Types.Mixed },
     },
   },
 });
 
-export default mongoose.model("Actor", actorSchema);
+const Actor = mongoose.model<ActorDoc>("Actor", actorSchema);
+export default Actor;
