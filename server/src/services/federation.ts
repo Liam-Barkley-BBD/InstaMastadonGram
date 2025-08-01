@@ -9,6 +9,8 @@ import type { ActorDoc } from "../models/actor.model.ts";
 
 import Post from "../models/post.model.ts";
 import { Temporal } from "@js-temporal/polyfill";
+import mongoose from "mongoose";
+import ActivityModel from "../models/activity.model.ts";
 
 const logger = getLogger("insta-mastadon-gram");
 
@@ -48,7 +50,7 @@ federation
 
   .setKeyPairsDispatcher(async (ctx, identifier) => {
     const actor = await findUserByHandle(identifier);
-    if (actor == null) return [];  // Return null if the key pair is not found.
+    if (actor == null) return [];
 
     const keyPairs = [];
 
@@ -130,11 +132,28 @@ federation
     logger.info(`Stored follow from ${followerHandle} to ${recipientHandle}`);
 
     // Send Accept response back to the follower
+    const acceptId = new mongoose.Types.ObjectId();
+    const acceptUri = ctx.getObjectUri(Accept, {
+      identifier: recipientHandle,
+      id: acceptId.toString(),
+    });
+
     const accept = new Accept({
+      id: acceptUri,
       actor: follow.objectId,
       object: follow,
       to: follow.actorId,
     });
+
+    // store accept activity in db for mastadon
+    const acceptActivity = new ActivityModel({
+      _id: acceptId,
+      type: "Accept",
+      actor: follow.objectId.href,
+      object: follow,
+      to: follow.actorId?.href,
+    });
+    await acceptActivity.save();
 
     await ctx.sendActivity(parsed, follower, accept);
   })
@@ -188,25 +207,33 @@ federation
 federation
   .setFollowersDispatcher("/users/{identifier}/followers", async (ctx, identifier, cursor) => {
     const followingActor = await Actor.findOne({ handle: identifier });
-    if (!followingActor) return { items: [] };
+    if (!followingActor) return null;
 
-    const follows = await FollowModel.find({ following: followingActor._id }).populate<{
-      follower: ActorDoc;
-    }>("follower");
+    const PAGE_SIZE = 10;
+    const numericCursor = parseInt(cursor ?? "0", 10);
 
-    const items: Recipient[] = follows.map((follow) => {
-      const follower = follow.follower;
-      return {
-        id: follower?.uri ? new URL(follower.uri) : null,
-        inboxId: follower?.inboxUri ? new URL(follower.inboxUri) : null,
-        endpoints: follower?.sharedInboxUri
-          ? { sharedInbox: new URL(follower.sharedInboxUri) }
-          : null,
-      };
-    });
+    const follows = await FollowModel.find({ following: followingActor._id })
+      .sort({ _id: -1 })
+      .skip(numericCursor)
+      .limit(PAGE_SIZE)
+      .populate<{ follower: ActorDoc }>("follower");
 
-    return { items };
+    const items = follows
+      .filter(f => !!f.follower?.uri && !!f.follower?.inboxUri)
+      .map(f => ({
+        id: new URL(f.follower!.uri),
+        inboxId: new URL(f.follower!.inboxUri),
+      }));
+
+    const nextCursor = items.length === PAGE_SIZE ? `${numericCursor + PAGE_SIZE}` : undefined;
+
+    return {
+      items, // ✅ now Recipient[]
+      nextCursor,
+    };
   })
+
+  .setFirstCursor(async (ctx, identifier) => "0")
 
   .setCounter(async (ctx, identifier) => {
     const followingActor = await Actor.findOne({ handle: identifier });
@@ -238,6 +265,23 @@ federation
         mediaType: "text/html",
         published: Temporal.Instant.from(post.created.toISOString()),
         url: ctx.getObjectUri(Note, values),
+      });
+    }
+  );
+
+federation.
+  setObjectDispatcher(
+    Accept,
+    "/users/{identifier}/accepts/{id}",
+    async (ctx, { identifier, id }) => {
+      const activity = await ActivityModel.findById(id);
+      if (!activity || activity.type !== "Accept") return null;
+
+      return new Accept({
+        id: ctx.getObjectUri(Accept, { identifier, id }),
+        actor: new URL(activity.actor),
+        object: activity.object,
+        to: new URL(activity.to),
       });
     }
   );
