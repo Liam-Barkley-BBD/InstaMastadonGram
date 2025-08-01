@@ -50,27 +50,17 @@ const ActorSchema = new Schema({
   timestamps: true
 });
 
-ActorSchema.methods.toActivityPubPerson = function() {
-  return {
-    '@context': 'https://www.w3.org/ns/activitystreams',
-    type: 'Person',
-    id: this.uri,
-    preferredUsername: this.handle,
-    name: this.name,
-    inbox: this.inboxUrl,
-    endpoints: {
-      sharedInbox: this.sharedInboxUrl
-    },
-    url: this.url,
-    summary: this.summary,
-    publicKey: this.publicKey ? {
-      id: this.publicKey.id,
-      owner: this.publicKey.owner,
-      publicKeyPem: this.publicKey.publicKeyPem
-    } : undefined
-  };
-};
+export interface UserActor {
+  userId: string,
+  uri: string,
+  handle: string,
+  name: string,
+  inboxUrl: string,
+  sharedInboxUrl:string,
+  url: string,
+  created: Date,
+  summary: string,
+  publicKey: string
+}
 
-const Actor = mongoose.model('Actor', ActorSchema);
-
-export default Actor;
+export default mongoose.model('Actor', ActorSchema);

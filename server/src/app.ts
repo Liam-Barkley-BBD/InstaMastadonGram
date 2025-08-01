@@ -7,6 +7,7 @@ import { integrateFederation } from "@fedify/express";
 import "./config/passport";
 import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
+import userRoutes from "./routes/users.routes.ts"
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
 
 app.use(integrateFederation(federation, (req) => undefined));
 
