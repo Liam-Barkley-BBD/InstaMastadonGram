@@ -34,7 +34,7 @@
 
 .beegram-logo p {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .beegram-nav {
@@ -389,47 +389,47 @@
   .app-container {
     flex-direction: column;
   }
-  
+
   .beegram-sidebar {
     display: none;
   }
-  
+
   .main-content {
     padding-bottom: 80px;
     padding-left: 0;
   }
-  
+
   .beegram-mobile-header {
     display: block;
   }
-  
+
   .beegram-mobile-nav {
     display: flex;
   }
-  
+
   .main-content-inner {
     padding: 16px;
   }
-  
+
   .beegram-feed {
     padding: 1rem 0.5rem;
   }
-  
+
   .beegram-post {
     margin-bottom: 1rem;
     padding: 1rem;
     border-radius: 1rem;
     background: rgba(0, 0, 0, 0.6);
   }
-  
+
   .beegram-empty-emoji {
     font-size: 3rem;
   }
-  
+
   .beegram-empty-heading {
     font-size: 1.5rem;
   }
-  
+
   .beegram-empty-text {
     font-size: 1rem;
   }
@@ -439,20 +439,20 @@
   .beegram-feed {
     padding: 0.5rem 0.25rem;
   }
-  
+
   .beegram-post {
     padding: 0.75rem;
   }
-  
+
   .beegram-mobile-nav {
     padding: 0.75rem;
   }
-  
+
   .beegram-mobile-nav-btn {
     min-width: 50px;
     padding: 0.375rem;
   }
-  
+
   .beegram-mobile-nav-label {
     font-size: 0.625rem;
   }
