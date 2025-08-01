@@ -6,6 +6,7 @@ import federation from "./services/federation.ts";
 import { integrateFederation } from "@fedify/express";
 import "./config/passport";
 import dotenv from "dotenv";
+import MongoStore from "connect-mongo";
 
 dotenv.config();
 
@@ -17,6 +18,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI!,
+    touchAfter: 24 * 3600,
+    ttl: 14 * 24 * 60 * 60
+  })
 }));
 app.use(passport.initialize());
 app.use(passport.session());
