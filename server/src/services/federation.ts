@@ -1,4 +1,4 @@
-import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, Person, Undo, type Recipient } from "@fedify/fedify";
+import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
@@ -6,6 +6,9 @@ import { findUserByHandle } from "./actor.service.ts";
 import FollowModel from "../models/follow.model.ts";
 import Actor from "../models/actor.model.ts";
 import type { ActorDoc } from "../models/actor.model.ts";
+
+import Post from "../models/post.model.ts";
+import { Temporal } from "@js-temporal/polyfill";
 
 const logger = getLogger("insta-mastadon-gram");
 
@@ -27,11 +30,10 @@ federation
       id: ctx.getActorUri(identifier),
       preferredUsername: identifier,
       name: identifier,
-      // For the publicKey property, we only use first CryptographicKey:
       publicKey: keys[0].cryptographicKey,
-      // For the assertionMethods property, we use all Multikey instances:
       assertionMethods: keys.map((key) => key.multikey),
       inbox: ctx.getInboxUri(identifier,),
+      outbox: ctx.getOutboxUri(identifier),
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
       }),
@@ -214,6 +216,99 @@ federation
     return count;
   });
 
+federation
+  .setObjectDispatcher(
+    Note,
+    "/users/{identifier}/posts/{id}",
+    async (ctx, values) => {
+
+      const post = await Post.findOne({ _id: values.id }).populate({
+        path: 'actor',
+        match: { handle: values.identifier }
+      });
+
+      if (!post || !post.actor) return null;
+
+      return new Note({
+        id: ctx.getObjectUri(Note, values),
+        attribution: ctx.getActorUri(values.identifier),
+        to: PUBLIC_COLLECTION,
+        cc: ctx.getFollowersUri(values.identifier),
+        content: post.content,
+        mediaType: "text/html",
+        published: Temporal.Instant.from(post.created.toISOString()),
+        url: ctx.getObjectUri(Note, values),
+      });
+    }
+  );
+
+federation
+  .setOutboxDispatcher(
+    "/users/{identifier}/outbox",
+    async (ctx, identifier, cursor) => {
+
+      const actor = await Actor.findOne({ handle: identifier });
+      if (!actor) {
+        console.warn(`No actor found for identifier '${identifier}'`);
+        return { items: [] };
+      }
+
+      const posts = await Post.find({ actor: actor._id })
+        .sort({ created: -1 })
+        .limit(20);
+
+      const to = PUBLIC_COLLECTION;
+      const cc = ctx.getFollowersUri(identifier);
+
+      const activities = posts.map((post) => {
+        const noteId = ctx.getObjectUri(Note, {
+          identifier: identifier,
+          id: post._id.toString(),
+        });
+
+        const note = new Note({
+          id: noteId,
+          attribution: ctx.getActorUri(identifier),
+          to,
+          cc,
+          content: post.content,
+          mediaType: "text/html",
+          published: Temporal.Instant.from(post.created.toISOString()),
+          url: noteId,
+        });
+
+        const createId = ctx.getObjectUri(Create, {
+          identifier: identifier,
+          id: post._id.toString(),
+        });
+
+        return new Create({
+          id: createId,
+          actor: ctx.getActorUri(identifier),
+          object: note,
+          published: note.published,
+          to,
+          cc,
+        });
+      });
+
+      return {
+        items: activities,
+        cursor: null,
+      };
+    }
+  );
+
+
+federation
+  .setObjectDispatcher(
+    Create,
+    "/users/{identifier}/creates/{id}",
+    async (ctx, { identifier, id }) => {
+      // implement logic to fetch and return the Create activity
+      return null;
+    }
+  );
 
 
 export default federation;
