@@ -4,7 +4,10 @@ import "./utils/loggers.ts";
 
 const PORT = 8000;
 
-mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/instaMastadonGram")
+mongoose
+  .connect(
+    process.env.MONGO_URI || "mongodb://127.0.0.1:27017/instaMastadonGram",
+  )
   .then(() => {
     console.log("MongoDB connected");
     app.listen(PORT, () => {
