@@ -1,22 +1,22 @@
-import React from 'react';
+import React from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { Home, Search, Plus, User } from 'lucide-react';
-import UploadMediaPage from './pages/Uploadpage';
+import { Home, Search, Plus, User } from "lucide-react";
+import UploadMediaPage from "./pages/Uploadpage";
 import HomePage from "./pages/HomePage";
-import Login from './pages/LoginPage';
+import Login from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
-import SearchUsersPage from './pages/SearchUsers';
-import './App.css';
+import SearchUsersPage from "./pages/SearchUsers";
+import "./App.css";
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
   const sidebarItems = [
-    { id: 'home', icon: Home, label: 'Home', path: '/' },
-    { id: 'search', icon: Search, label: 'Search', path: '/search' },
-    { id: 'create', icon: Plus, label: 'Create', path: '/create' },
-    { id: 'profile', icon: User, label: 'Profile', path: '/me' }
+    { id: "home", icon: Home, label: "Home", path: "/" },
+    { id: "search", icon: Search, label: "Search", path: "/search" },
+    { id: "create", icon: Plus, label: "Create", path: "/create" },
+    { id: "profile", icon: User, label: "Profile", path: "/me" },
   ];
 
   const handleNavigation = (path: string) => {
@@ -27,7 +27,7 @@ function App() {
     return location.pathname === path;
   };
 
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage = location.pathname === "/login";
 
   if (isLoginPage) {
     return (
@@ -52,7 +52,7 @@ function App() {
             <button
               key={item.id}
               onClick={() => handleNavigation(item.path)}
-              className={`beegram-nav-btn ${isActive(item.path) ? 'active' : ''}`}
+              className={`beegram-nav-btn ${isActive(item.path) ? "active" : ""}`}
             >
               <item.icon size={24} />
               <span>{item.label}</span>
@@ -81,8 +81,14 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/me" element={<ProfilePage />} />
-            <Route path="/search" element={<div>Search Page Coming Soon</div>} />
-            <Route path="/create" element={<div>Create Page Coming Soon</div>} />
+            <Route
+              path="/search"
+              element={<div>Search Page Coming Soon</div>}
+            />
+            <Route
+              path="/create"
+              element={<div>Create Page Coming Soon</div>}
+            />
             <Route path="/login" element={<Login />} />
           </Routes>
         </div>
@@ -94,7 +100,7 @@ function App() {
           <button
             key={item.id}
             onClick={() => handleNavigation(item.path)}
-            className={`beegram-mobile-nav-btn ${isActive(item.path) ? 'active' : ''}`}
+            className={`beegram-mobile-nav-btn ${isActive(item.path) ? "active" : ""}`}
           >
             <item.icon size={24} />
             <span className="beegram-mobile-nav-label">{item.label}</span>

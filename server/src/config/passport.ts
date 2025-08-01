@@ -30,11 +30,13 @@ passport.use(
       });
       await user.save();
 
-      const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
-      const sanitizedHandle = baseHandle
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase() + '_' + profile.id.slice(-7);
-      
+      const baseHandle =
+        profile.emails?.[0]?.value?.split("@")[0] || `user${user._id}`;
+      const sanitizedHandle =
+        baseHandle.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase() +
+        "_" +
+        profile.id.slice(-7);
+
       const actor = new Actor({
         userId: user._id,
         uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
@@ -43,11 +45,11 @@ passport.use(
         inboxUrl: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
         sharedInboxUrl: `${process.env.DOMAIN}/inbox`,
         url: `${process.env.DOMAIN}/@${sanitizedHandle}`,
-        summary: null
+        summary: null,
       });
       await actor.save();
 
       done(null, user);
-    }
-  )
+    },
+  ),
 );
