@@ -1,5 +1,6 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { generateCryptoKeyPair, exportJwk } from "@fedify/fedify";
 import User from "../models/user.model.ts";
 import Actor from "../models/actor.model.ts";
 import dotenv from "dotenv";
@@ -28,27 +29,40 @@ passport.use(
         name: profile.displayName,
         email: profile.emails?.[0]?.value,
       });
-      await user.save();
+      
+      const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
+      const sanitizedHandle = baseHandle
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase() + '_' + profile.id.slice(-7);
 
-      const baseHandle =
-        profile.emails?.[0]?.value?.split("@")[0] || `user${user._id}`;
-      const sanitizedHandle =
-        baseHandle.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase() +
-        "_" +
-        profile.id.slice(-7);
+      const rsaPair = await generateCryptoKeyPair("RSASSA-PKCS1-v1_5");
+      const ed25519Pair = await generateCryptoKeyPair("Ed25519");
+
+      const rsaPublic = await exportJwk(rsaPair.publicKey);
+      const rsaPrivate = await exportJwk(rsaPair.privateKey);
+      const edPublic = await exportJwk(ed25519Pair.publicKey);
+      const edPrivate = await exportJwk(ed25519Pair.privateKey);
 
       const actor = new Actor({
-        userId: user._id,
         uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
+        inboxUri: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
+        sharedInboxUri: `${process.env.DOMAIN}/inbox`,
         handle: sanitizedHandle,
-        name: profile.displayName,
-        inboxUrl: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
-        sharedInboxUrl: `${process.env.DOMAIN}/inbox`,
-        url: `${process.env.DOMAIN}/@${sanitizedHandle}`,
-        summary: null,
+        keys: {
+          rsa: {
+            publicKey: rsaPublic,
+            privateKey: rsaPrivate,
+          },
+          ed25519: {
+            publicKey: edPublic,
+            privateKey: edPrivate,
+          },
+        },
       });
+      
       await actor.save();
-
+      await user.save();
+      
       done(null, user);
     },
   ),
