@@ -4,7 +4,8 @@ import { client } from "./utils/mongo.ts";
 
 const PORT = 8000;
 
-client.connect()
+client
+  .connect()
   .then(() => {
     console.log("MongoDB connected");
     app.listen(PORT, () => {
