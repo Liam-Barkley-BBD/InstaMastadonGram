@@ -1,10 +1,11 @@
-import { Accept, Create, createFederation, Follow, getActorHandle, importJwk, Person } from "@fedify/fedify";
+import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, Person, Undo, type Recipient } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
 
 import FollowModel from "../models/follow.model.ts";
 import Actor from "../models/actor.model.ts";
+import type { ActorDoc } from "../models/actor.model.ts";
 
 const logger = getLogger("insta-mastadon-gram");
 
@@ -30,7 +31,11 @@ federation
       publicKey: keys[0].cryptographicKey,
       // For the assertionMethods property, we use all Multikey instances:
       assertionMethods: keys.map((key) => key.multikey),
-      inbox: ctx.getInboxUri(identifier,)
+      inbox: ctx.getInboxUri(identifier,),
+      endpoints: new Endpoints({
+        sharedInbox: ctx.getInboxUri(),
+      }),
+      followers: ctx.getFollowersUri(identifier),
     });
   })
 
@@ -64,7 +69,7 @@ federation
 
 // Inbox dispatcher
 federation
-  .setInboxListeners("/users/{identifier}/inbox")
+  .setInboxListeners("/users/{identifier}/inbox", "/inbox")
 
   /* Follow activity */
   .on(Follow, async (ctx, follow) => {
@@ -132,6 +137,37 @@ federation
     await ctx.sendActivity(parsed, follower, accept);
   })
 
+  .on(Undo, async (ctx, undo) => {
+    const object = await undo.getObject();
+
+    if (!(object instanceof Follow)) return;
+
+    if (undo.actorId == null || object.objectId == null) return;
+
+    const parsed = ctx.parseUri(object.objectId);
+    if (parsed == null || parsed.type !== "actor") return;
+
+    const recipientHandle = parsed.identifier;
+
+    const followingActor = await Actor.findOne({ handle: recipientHandle });
+    if (!followingActor) return;
+
+    const followerActor = await Actor.findOne({ uri: undo.actorId.href });
+    if (!followerActor) return;
+
+    // remove follow relationship from the DB
+    const deleted = await FollowModel.findOneAndDelete({
+      follower: followerActor._id,
+      following: followingActor._id,
+    });
+
+    if (deleted) {
+      logger.info(`Removed follow from ${followerActor.handle} to ${followingActor.handle}`);
+    } else {
+      logger.debug(`No follow found to remove from ${followerActor.handle} to ${followingActor.handle}`);
+    }
+  })
+
   .on(Create, async (ctx, create) => {
     if (create.toId == null) return;
 
@@ -146,5 +182,38 @@ federation
   .onError(async (ctx, error) => {
     console.error(error);
   });
+
+federation
+  .setFollowersDispatcher("/users/{identifier}/followers", async (ctx, identifier, cursor) => {
+    const followingActor = await Actor.findOne({ handle: identifier });
+    if (!followingActor) return { items: [] };
+
+    const follows = await FollowModel.find({ following: followingActor._id }).populate<{
+      follower: ActorDoc;
+    }>("follower");
+
+    const items: Recipient[] = follows.map((follow) => {
+      const follower = follow.follower;
+      return {
+        id: follower?.uri ? new URL(follower.uri) : null,
+        inboxId: follower?.inboxUri ? new URL(follower.inboxUri) : null,
+        endpoints: follower?.sharedInboxUri
+          ? { sharedInbox: new URL(follower.sharedInboxUri) }
+          : null,
+      };
+    });
+
+    return { items };
+  })
+
+  .setCounter(async (ctx, identifier) => {
+    const followingActor = await Actor.findOne({ handle: identifier });
+    if (!followingActor) return 0;
+
+    const count = await FollowModel.countDocuments({ following: followingActor._id });
+    return count;
+  });
+
+
 
 export default federation;
