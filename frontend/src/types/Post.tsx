@@ -1,9 +1,8 @@
 export interface Post {
   id: string;
-  username: string;
+  name: string;
   timestamp: string;
   avatar: string;
-  isFollowing: boolean;
-  hasImage: boolean;
+  content: string;
   description: string;
 }
