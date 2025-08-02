@@ -14,10 +14,8 @@ router.get('/', async (req, res) => {
     res.status(200).json(user);
 
   } catch (error) {
-    res.status(500).json({ error: `An error occured: ${error}`})
+    res.status(500).json({ error: `An error occured: ${error}`});
   }
 })
-
-router.get('/search', )
 
 export default router;
