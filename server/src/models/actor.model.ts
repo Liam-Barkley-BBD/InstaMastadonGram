@@ -1,6 +1,7 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
 export interface ActorDoc extends Document {
+  userId: string;
   uri: string;
   inboxUri: string;
   handle: string;
@@ -18,6 +19,7 @@ export interface ActorDoc extends Document {
 }
 
 const actorSchema = new Schema<ActorDoc>({
+  userId: { type: String, required: true },
   uri: { type: String, required: true },
   inboxUri: { type: String, required: true },
   handle: { type: String, required: true },

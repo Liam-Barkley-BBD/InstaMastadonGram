@@ -29,6 +29,7 @@ passport.use(
         name: profile.displayName,
         email: profile.emails?.[0]?.value,
       });
+      await user.save();
       
       const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
       const sanitizedHandle = baseHandle
@@ -44,6 +45,7 @@ passport.use(
       const edPrivate = await exportJwk(ed25519Pair.privateKey);
 
       const actor = new Actor({
+        userId: user._id,
         uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
         inboxUri: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
         sharedInboxUri: `${process.env.DOMAIN}/inbox`,
@@ -61,8 +63,6 @@ passport.use(
       });
       
       await actor.save();
-      await user.save();
-      
       done(null, user);
     }
   )

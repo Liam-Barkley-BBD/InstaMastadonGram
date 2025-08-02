@@ -1,5 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import type { SessionData } from "express-session";
+import userModel from "../models/user.model.ts";
+import Actor from "../models/actor.model.ts";
+import { type ActorDoc } from "../models/actor.model.ts";
 
 declare module 'express-session' {
     interface SessionData {
@@ -8,10 +11,23 @@ declare module 'express-session' {
 }
 
 export const isAuthenticated = async(req: Request, res: Response, next: NextFunction) => {
-  const requestSession = req.session as SessionData;
-  const pass: { user: string } = requestSession.passport;
-  if(!pass) {
-    return res.status(403).json({ error: "Forbidden"});
+  try {  
+    const requestSession = req.session as SessionData;
+    const pass: { user: string } = requestSession.passport;
+    
+    if(req.isUnauthenticated()) {
+      return res.status(403).json({ error: "Forbidden"});
+    }
+
+    const currentUser = await userModel.findOne({ _id: pass.user });
+    const user: ActorDoc = await Actor.findOne({ userId: currentUser?._id }) as ActorDoc;
+
+    req.user = { 
+      handle: user.handle,
+      inboxUri: user.inboxUri,
+    };
+    next();
+  } catch(error) {
+    next();
   }
-  next();
 }
