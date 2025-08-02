@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, UserPlus, UserCheck, MapPin, Users2, Verified } from 'lucide-react';
 import './SearchUsers.css';
 
 const SearchUsersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [recentSearches, setRecentSearches] = useState([]);
-  const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [, setRecentSearches] = useState([]);
+  const [, setSuggestedUsers] = useState([]);
   const [followingUsers, setFollowingUsers] = useState(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
