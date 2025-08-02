@@ -1,66 +1,38 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Document, Model, Schema } from "mongoose";
 
-const ActorSchema = new Schema({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: false,
-    index: true
-  },
-  uri: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  handle: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  name: {
-    type: String,
-    required: false
-  },
-  inboxUrl: {
-    type: String,
-    required: true
-  },
-  sharedInboxUrl: {
-    type: String,
-    required: false
-  },
-  url: {
-    type: String,
-    required: false
-  },
-  created: {
-    type: Date,
-    default: Date.now
-  },
-  summary: {
-    type: String,
-    required: false
-  },
-  publicKey: {
-    id: { type: String },
-    owner: { type: String },
-    publicKeyPem: { type: String }
-  }
-}, {
-  timestamps: true
-});
-
-export interface UserActor {
-  userId: string,
-  uri: string,
-  handle: string,
-  name: string,
-  inboxUrl: string,
-  sharedInboxUrl:string,
-  url: string,
-  created: Date,
-  summary: string,
-  publicKey: string
+export interface ActorDoc extends Document {
+  uri: string;
+  inboxUri: string;
+  handle: string;
+  sharedInboxUri?: string;
+  keys?: {
+    rsa?: {
+      publicKey: Record<string, any>;
+      privateKey: Record<string, any>;
+    };
+    ed25519?: {
+      publicKey: Record<string, any>;
+      privateKey: Record<string, any>;
+    };
+  };
 }
 
-export default mongoose.model('Actor', ActorSchema);
+const actorSchema = new Schema<ActorDoc>({
+  uri: { type: String, required: true },
+  inboxUri: { type: String, required: true },
+  handle: { type: String, required: true },
+  sharedInboxUri: { type: String },
+  keys: {
+    rsa: {
+      publicKey: { type: Schema.Types.Mixed },
+      privateKey: { type: Schema.Types.Mixed },
+    },
+    ed25519: {
+      publicKey: { type: Schema.Types.Mixed },
+      privateKey: { type: Schema.Types.Mixed },
+    },
+  },
+});
+
+const Actor = mongoose.model<ActorDoc>("Actor", actorSchema);
+export default Actor;
