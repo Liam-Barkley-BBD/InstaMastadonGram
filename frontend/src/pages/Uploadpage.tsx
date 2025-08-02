@@ -1,29 +1,41 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   Upload, X, Image, Video, Camera, Smile
 } from 'lucide-react';
 import './Uploadpage.css';
 
-const UploadMediaPage = () => {
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [caption, setCaption] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [location, setLocation] = useState('');
-  const [taggedUsers, setTaggedUsers] = useState([]);
-  const fileInputRef = useRef(null);
 
-  const handleFileSelect = (event) => {
-    const files = Array.from(event.target.files);
-    const fileObjects = files.map(file => ({
+type SelectedFile = {
+  file: File;
+  url: string;
+  type: string;
+  id: string;
+}
+
+const UploadMediaPage = () => {
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
+  const [caption, setCaption] = useState<string>('');
+  const [, setShowAdvanced] = useState<boolean>(false);
+  const [location, setLocation] = useState<string>('');
+  const [taggedUsers, setTaggedUsers] = useState([]);
+  const fileInputRef = useRef <HTMLInputElement>(null);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const fileArray = Array.from(files);
+    const fileObjects = fileArray.map((file) => ({
       file,
       url: URL.createObjectURL(file),
-      type: file.type.startsWith('video/') ? 'video' : 'image',
-      id: Math.random().toString(36).substr(2, 9)
+      type: file.type.startsWith("video/") ? "video" : "image",
+      id: Math.random().toString(36).substr(2, 9),
     }));
-    setSelectedFiles(prev => [...prev, ...fileObjects]);
+
+    setSelectedFiles((prev) => [...prev, ...fileObjects]);
   };
 
-  const removeFile = (id) => {
+  const removeFile = (id: string) => {
     setSelectedFiles(prev => {
       const updated = prev.filter(f => f.id !== id);
       const removed = prev.find(f => f.id === id);
