@@ -14,6 +14,7 @@ export const isAuthenticated = async(req: Request, res: Response, next: NextFunc
   try {  
     const requestSession = req.session as SessionData;
     const pass: { user: string } = requestSession.passport;
+    
     if(req.isUnauthenticated()) {
       return res.status(403).json({ error: "Forbidden"});
     }
@@ -21,7 +22,10 @@ export const isAuthenticated = async(req: Request, res: Response, next: NextFunc
     const currentUser = await userModel.findOne({ _id: pass.user });
     const user: ActorDoc = await Actor.findOne({ userId: currentUser?._id }) as ActorDoc;
 
-    req.user = user;
+    req.user = { 
+      handle: user.handle,
+      inboxUri: user.inboxUri,
+    };
     next();
   } catch(error) {
     next();

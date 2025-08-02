@@ -31,7 +31,6 @@ passport.use(
       });
       await user.save();
       
-      console.log(user);
       const baseHandle = profile.emails?.[0]?.value?.split('@')[0] || `user${user._id}`;
       const sanitizedHandle = baseHandle
         .replace(/[^a-zA-Z0-9_]/g, '_')
@@ -64,7 +63,6 @@ passport.use(
       });
       
       await actor.save();
-      
       done(null, user);
     }
   )
