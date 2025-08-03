@@ -32,11 +32,8 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use("/auth", authRoutes);
-app.use("/users", userRoutes);
-
-app.use(integrateFederation(federation, (req) => undefined));
-app.use("/posts", postRoutes)
+app.use("/api/auth", authRoutes);
+app.use("/api/posts", postRoutes)
 
 app.get("/", (req, res) => {
   res.send("Hello, Fedify + Google Auth!");
