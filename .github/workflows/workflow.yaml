@@ -158,7 +158,6 @@ jobs:
               pm2 delete instamastadongram-api;
             fi &&
             
-            cd dist &&
             pm2 start npm --name instamastadongram-api -- run prod
           '
   setup-databases:
