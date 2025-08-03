@@ -1,4 +1,4 @@
-name: Simple EC2 Deployment
+name: Build and Push to ECR
 
 on:
   push:
@@ -72,9 +72,9 @@ jobs:
             --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "echo === Starting Simple Deployment ===",
+              "echo === Starting Deployment ===",
               "sudo yum update -y",
-              "curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
+              "curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -",
               "sudo yum install -y nodejs git",
               "sudo npm install -g pm2",
               "sudo mkdir -p /opt/instamastadongram",
@@ -102,7 +102,6 @@ jobs:
               "sudo systemctl start mongod",
               "sudo systemctl enable mongod",
               "sleep 10",
-              "mongosh --eval \"$(cat mongo-init.js)\"",
               "pm2 delete all || true",
               "cd /opt/instamastadongram/server && pm2 start npm --name backend -- start",
               "cd /opt/instamastadongram/frontend && pm2 start npm --name frontend -- run preview -- --port 80 --host 0.0.0.0",
