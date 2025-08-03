@@ -75,10 +75,6 @@ jobs:
       - name: Install required dependencies
         run: npm install
         working-directory: server
-      
-      - name: Compile Typescript to Javascript
-        run: npm run build
-        working-directory: server
 
       - name: Package application
         working-directory: server
