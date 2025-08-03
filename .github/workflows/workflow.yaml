@@ -155,18 +155,20 @@ jobs:
           curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - &&
           sudo apt-get install -y nodejs &&
 
-            unzip -o api-build.zip &&
+          sudo npm install -g pm2 &&
 
-            cd api-build/ &&
+          unzip -o api-build.zip &&
 
-            npm install &&
-            
-            # Stop and delete existing pm2 process if it exists
-            if pm2 list | grep -q "instamastadongram-api"; then
-              pm2 delete instamastadongram-api;
-            fi &&
-            
-            pm2 start npm --name instamastadongram-api -- run prod
+          cd api-build/ &&
+
+          npm install &&
+          
+          # Stop and delete existing pm2 process if it exists
+          if pm2 list | grep -q "instamastadongram-api"; then
+            pm2 delete instamastadongram-api;
+          fi &&
+          
+          pm2 start npm --name instamastadongram-api -- run prod
           '
   setup-databases:
       name: Setup MongoDB and Redis
