@@ -16,4 +16,4 @@ output "ssh_command" {
 output "app_url" {
   description = "URL to access the application"
   value       = "http://${aws_eip.app.public_ip}"
-} 
+}
