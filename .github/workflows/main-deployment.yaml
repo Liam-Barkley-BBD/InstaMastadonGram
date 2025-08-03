@@ -81,6 +81,16 @@ jobs:
           echo "Backend image: ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}"
           echo "Frontend image: ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}"
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.0.1
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        id: init
+        run: terraform init -backend-config="bucket=${{ vars.ECR_REPOSITORY }}-tf-state" -backend-config="key=terraformstate/terraform.tfstate" -backend-config="region=${{ vars.AWS_REGION }}"
+
       - name: Get EC2 public IP
         id: ec2-ip
         run: |
