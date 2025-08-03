@@ -18,22 +18,4 @@ output "app_url" {
   value       = "http://${aws_eip.app.public_ip}"
 }
 
-output "backend_ecr_repository_url" {
-  description = "ECR repository URL for backend image"
-  value       = aws_ecr_repository.backend.repository_url
-}
 
-output "frontend_ecr_repository_url" {
-  description = "ECR repository URL for frontend image"
-  value       = aws_ecr_repository.frontend.repository_url
-}
-
-output "backend_ecr_repository_name" {
-  description = "ECR repository name for backend image"
-  value       = aws_ecr_repository.backend.name
-}
-
-output "frontend_ecr_repository_name" {
-  description = "ECR repository name for frontend image"
-  value       = aws_ecr_repository.frontend.name
-}

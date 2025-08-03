@@ -23,6 +23,7 @@
   },
   "scripts": {
     "dev": "dotenvx run -- tsx watch ./src/index.ts",
+    "start": "dotenvx run -- node --import tsx ./src/index.ts",
     "prod": "dotenvx run -- node --import tsx ./src/index.ts"
   }
 }
