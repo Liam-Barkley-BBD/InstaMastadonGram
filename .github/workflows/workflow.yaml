@@ -79,11 +79,13 @@ jobs:
       - name: Package application
         working-directory: server
         run: |
-          mkdir -p api-build
-          cp -r dist api-build/
-          cp package.json api-build/
-          zip -r api-build.zip api-build
-          
+            mkdir -p api-build
+            cp -r src api-build/
+            cp package.json api-build/
+            cp package-lock.json api-build/ || true
+            cp .env.example api-build/ || true
+            zip -r api-build.zip api-build
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
