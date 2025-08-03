@@ -93,12 +93,6 @@ jobs:
           cd terraform
           terraform init
 
-      - name: Extract Terraform Outputs
-        uses: dflook/terraform-output@v1
-        id: tf-outputs
-        with:
-          path: terraform
-
       - name: Get EC2 public IP
         id: ec2-ip
         run: |
@@ -227,7 +221,7 @@ jobs:
           EOF
 
           echo "Starting services with Docker Compose..."
-          docker-compose -f docker-compose.prod.yml up -d
+          docker compose -f docker-compose.prod.yml up -d
 
           echo "Deployment completed successfully!"
           EOF
