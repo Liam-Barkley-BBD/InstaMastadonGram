@@ -52,7 +52,7 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="bucket=instamastadongram-tf-state" -backend-config="key=terraformstate/terraform.tfstate" -backend-config="region=${{ env.AWS_REGION }}"
+        run: terraform init -backend-config="bucket=instamastadongram-tf-state" -backend-config="key=tf-state.tf" -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
@@ -75,19 +75,17 @@ jobs:
       - name: Install required dependencies
         run: npm install
         working-directory: server
-      
-      - name: Compile Typescript to Javascript
-        run: npm run build
-        working-directory: server
 
       - name: Package application
         working-directory: server
         run: |
-          mkdir -p api-build
-          cp -r dist api-build/
-          cp package.json api-build/
-          zip -r api-build.zip api-build
-          
+            mkdir -p api-build
+            cp -r src api-build/
+            cp package.json api-build/
+            cp package-lock.json api-build/ || true
+            cp .env.example api-build/ || true
+            zip -r api-build.zip api-build
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -151,19 +149,26 @@ jobs:
           scp -o StrictHostKeyChecking=no -i privatekey.pem ./api-build.zip "ubuntu@$EC2_HOST:api-build.zip"
           
           ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-            unzip -o api-build.zip &&
+          sudo apt-get update &&
+          sudo apt-get install -y unzip curl &&
 
-            cd api-build/ &&
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - &&
+          sudo apt-get install -y nodejs &&
 
-            npm install &&
-            
-            # Stop and delete existing pm2 process if it exists
-            if pm2 list | grep -q "instamastadongram-api"; then
-              pm2 delete instamastadongram-api;
-            fi &&
-            
-            cd dist &&
-            pm2 start npm --name instamastadongram-api -- run prod
+          sudo npm install -g pm2 &&
+
+          unzip -o api-build.zip &&
+
+          cd api-build/ &&
+
+          npm install &&
+          
+          # Stop and delete existing pm2 process if it exists
+          if pm2 list | grep -q "instamastadongram-api"; then
+            pm2 delete instamastadongram-api;
+          fi &&
+          
+          pm2 start npm --name instamastadongram-api -- run prod
           '
   setup-databases:
       name: Setup MongoDB and Redis
@@ -202,7 +207,7 @@ jobs:
             sudo systemctl start redis-server
 
             # Install MongoDB
-            sudo apt-get install gnupg curl
+            sudo apt-get install -y gnupg curl
             curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
             sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg \
             --dearmor
@@ -217,85 +222,90 @@ jobs:
             systemctl status mongod
             EOF
 
-  issue-certificates:
-    needs:
-    - deploy-api
-    - terraform
-    permissions:
-        id-token: write
-        contents: read
-    name: Issue Certificates
-    runs-on: ubuntu-latest
-    steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: arn:aws:iam::683044484462:role/github-oidc
-        aws-region: ${{ env.AWS_REGION }}
+  # issue-certificates:
+  #   needs:
+  #   - deploy-api
+  #   - terraform
+  #   permissions:
+  #       id-token: write
+  #       contents: read
+  #   name: Issue Certificates
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Configure AWS credentials
+  #     uses: aws-actions/configure-aws-credentials@v2
+  #     with:
+  #       role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+  #       aws-region: ${{ env.AWS_REGION }}
 
-    - name: Get secrets from AWS Key Store
-      uses: aws-actions/aws-secretsmanager-get-secrets@v2
-      with:
-        secret-ids: |
-          EC2_PRIVATE_KEY, privatekey
+  #   - name: Get secrets from AWS Key Store
+  #     uses: aws-actions/aws-secretsmanager-get-secrets@v2
+  #     with:
+  #       secret-ids: |
+  #         EC2_PRIVATE_KEY, privatekey
 
-    - name: Setup private key
-      run: |
-        echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
-        chmod 0500 privatekey.pem
+  #   - name: Setup private key
+  #     run: |
+  #       echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
+  #       chmod 0500 privatekey.pem
 
-    - name: Setup nginx proxy
-      run: |
-        EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #   - name: Setup nginx proxy
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
 
-        ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
-        sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
-        server {
-        listen 80;
-        server_name bbd-grad-project.co.za www.bbd-grad-project.co.za;
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
 
-        location /.well-known/acme-challenge/ {
-            root /var/www/html;
-        }
+  #         sudo apt-get update
+  #         sudo apt-get install -y nginx
 
-        location /api/ {
-            proxy_pass http://localhost:8000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
+  #         sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
+  #         server {
+  #         listen 80;
+  #         server_name bbd-grad-project.co.za www.bbd-grad-project.co.za;
 
-        location /.well-known/webfinger {
-            proxy_pass http://localhost:8000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-        }
-        NGINX_CONF
-        EOF
+  #         location /.well-known/acme-challenge/ {
+  #             root /var/www/html;
+  #             try_files $uri =404;
+  #         }
 
-    - name: Verify and Reload nginx
-      run: |
-        EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-        ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-          sudo nginx -t && sudo systemctl reload nginx
-        '
+  #         location /api/ {
+  #             proxy_pass http://localhost:8000;
+  #             proxy_http_version 1.1;
+  #             proxy_set_header Upgrade $http_upgrade;
+  #             proxy_set_header Connection 'upgrade';
+  #             proxy_set_header Host $host;
+  #             proxy_cache_bypass $http_upgrade;
+  #             proxy_set_header X-Real-IP $remote_addr;
+  #             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  #             proxy_set_header X-Forwarded-Proto $scheme;
+  #         }
 
-    - name: Cerbot
-      run: |
-        EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-        ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-          sudo apt install certbot python3-certbot-nginx -y &&
-          sudo certbot --nginx -d bbd-grad-project.co.za -d www.bbd-grad-project.co.za --non-interactive --agree-tos --email liam.barkley@bbd.co.za
-        '
+  #         location /.well-known/webfinger {
+  #             proxy_pass http://localhost:8000;
+  #             proxy_http_version 1.1;
+  #             proxy_set_header Upgrade $http_upgrade;
+  #             proxy_set_header Connection 'upgrade';
+  #             proxy_set_header Host $host;
+  #             proxy_cache_bypass $http_upgrade;
+  #             proxy_set_header X-Real-IP $remote_addr;
+  #             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  #             proxy_set_header X-Forwarded-Proto $scheme;
+  #         }
+  #       }
+  #       NGINX_CONF
+  #       EOF
+
+  #   - name: Verify and Reload nginx
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+  #         sudo nginx -t && sudo systemctl reload nginx
+  #       '
+
+  #   - name: Cerbot
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+  #         sudo apt install certbot python3-certbot-nginx -y &&
+  #         sudo certbot --nginx -d bbd-grad-project.co.za -d www.bbd-grad-project.co.za --non-interactive --agree-tos --email liam.barkley@bbd.co.za
+  #       '
