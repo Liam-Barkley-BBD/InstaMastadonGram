@@ -63,59 +63,185 @@ jobs:
           echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
           echo "EC2 Public IP: $PUBLIC_IP"
 
-      - name: Deploy to EC2
+      - name: Create deployment script
         run: |
-          echo "Starting simple deployment to EC2..."
+          cat > deploy-script.sh << 'EOF'
+          #!/bin/bash
+          set -e
 
-          # Deploy using SSM
+          echo "=== Starting Deployment ==="
+
+          # Update system
+          echo "Updating system..."
+          sudo yum update -y
+
+          # Install Node.js
+          echo "Installing Node.js..."
+          curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+          sudo yum install -y nodejs git
+
+          # Install PM2
+          echo "Installing PM2..."
+          sudo npm install -g pm2
+
+          # Create application directory
+          echo "Setting up application directory..."
+          sudo mkdir -p /opt/instamastadongram
+          sudo chown ec2-user:ec2-user /opt/instamastadongram
+          cd /opt/instamastadongram
+
+          # Clean and clone repository
+          echo "Cloning repository..."
+          rm -rf * || true
+          git clone https://github.com/${{ github.repository }}.git .
+
+          # Install dependencies
+          echo "Installing server dependencies..."
+          cd server && npm install && cd ..
+
+          echo "Installing frontend dependencies..."
+          cd frontend && npm install && npm run build && cd ..
+
+          # Create environment file
+          echo "Creating environment file..."
+          cat > server/.env << 'ENVEOF'
+          PORT=8000
+          MONGO_URI=mongodb://localhost:27017/instaMastadonGram
+          SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL=http://${{ steps.ec2-ip.outputs.public_ip }}:8000/auth/google/callback
+          ENVEOF
+
+          # Install and start MongoDB
+          echo "Installing MongoDB..."
+          sudo tee /etc/yum.repos.d/mongodb-org.repo << 'MONGOEOF'
+          [mongodb-org-7.0]
+          name=MongoDB Repository
+          baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/7.0/x86_64/
+          gpgcheck=1
+          enabled=1
+          gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc
+          MONGOEOF
+
+          sudo yum install -y mongodb-org
+          sudo systemctl start mongod
+          sudo systemctl enable mongod
+
+          # Wait for MongoDB to start
+          echo "Waiting for MongoDB to start..."
+          sleep 10
+
+          # Initialise MongoDB
+          echo "Initialising MongoDB..."
+          mongosh --eval "$(cat mongo-init.js)"
+
+          # Start applications with PM2
+          echo "Starting applications..."
+          pm2 delete all || true
+          cd /opt/instamastadongram/server && pm2 start npm --name backend -- start
+          cd /opt/instamastadongram/frontend && pm2 start npm --name frontend -- run preview -- --port 80 --host 0.0.0.0
+          pm2 save
+          pm2 startup
+
+          echo "=== Deployment completed ==="
+          pm2 status
+          EOF
+
+      - name: Upload and execute deployment script
+        run: |
+          echo "Uploading deployment script to EC2..."
+
+          # Upload the script
           aws ssm send-command \
             --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "echo === Starting Deployment ===",
+              "cat > /tmp/deploy-script.sh << '\''SCRIPTEOF'\''",
+              "#!/bin/bash",
+              "set -e",
+              "",
+              "echo \"=== Starting Deployment ===\"",
+              "",
+              "# Update system",
+              "echo \"Updating system...\"",
               "sudo yum update -y",
+              "",
+              "echo \"Installing Node.js...\"",
               "curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -",
               "sudo yum install -y nodejs git",
+              "",
+              "echo \"Installing PM2...\"",
               "sudo npm install -g pm2",
+              "",
+              "echo \"Setting up application directory...\"",
               "sudo mkdir -p /opt/instamastadongram",
               "sudo chown ec2-user:ec2-user /opt/instamastadongram",
               "cd /opt/instamastadongram",
+              "",
+              "echo \"Cloning repository...\"",
               "rm -rf * || true",
               "git clone https://github.com/${{ github.repository }}.git .",
+              "",
+              "echo \"Installing server dependencies...\"",
               "cd server && npm install && cd ..",
+              "",
+              "echo \"Installing frontend dependencies...\"",
               "cd frontend && npm install && npm run build && cd ..",
-              "echo \"PORT=8000\" > server/.env",
-              "echo \"MONGO_URI=mongodb://localhost:27017/instaMastadonGram\" >> server/.env",
-              "echo \"SESSION_SECRET=${{ secrets.SESSION_SECRET }}\" >> server/.env",
-              "echo \"GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}\" >> server/.env",
-              "echo \"GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}\" >> server/.env",
-              "echo \"GOOGLE_CALLBACK_URL=http://${{ steps.ec2-ip.outputs.public_ip }}:8000/auth/google/callback\" >> server/.env",
-              "sudo tee /etc/yum.repos.d/mongodb-org.repo << '\''EOF'\''",
+              "",
+              "echo \"Creating environment file...\"",
+              "cat > server/.env << '\''ENVEOF'\''",
+              "PORT=8000",
+              "MONGO_URI=mongodb://localhost:27017/instaMastadonGram",
+              "SESSION_SECRET=${{ secrets.SESSION_SECRET }}",
+              "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}",
+              "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}",
+              "GOOGLE_CALLBACK_URL=http://${{ steps.ec2-ip.outputs.public_ip }}:8000/auth/google/callback",
+              "ENVEOF",
+              "",
+              "echo \"Installing MongoDB...\"",
+              "sudo tee /etc/yum.repos.d/mongodb-org.repo << '\''MONGOEOF'\''",
               "[mongodb-org-7.0]",
               "name=MongoDB Repository",
               "baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/7.0/x86_64/",
               "gpgcheck=1",
               "enabled=1",
               "gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc",
-              "EOF",
+              "MONGOEOF",
+              "",
               "sudo yum install -y mongodb-org",
               "sudo systemctl start mongod",
               "sudo systemctl enable mongod",
+              "",
+              "echo \"Waiting for MongoDB to start...\"",
               "sleep 10",
+              "",
+              "echo \"Initialising MongoDB...\"",
+              "mongosh --eval \"$(cat mongo-init.js)\"",
+              "",
+              "echo \"Starting applications...\"",
               "pm2 delete all || true",
               "cd /opt/instamastadongram/server && pm2 start npm --name backend -- start",
               "cd /opt/instamastadongram/frontend && pm2 start npm --name frontend -- run preview -- --port 80 --host 0.0.0.0",
               "pm2 save",
               "pm2 startup",
-              "echo === Deployment completed ===",
-              "pm2 status"
+              "",
+              "echo \"=== Deployment completed ===\"",
+              "pm2 status",
+              "SCRIPTEOF",
+              "",
+              "chmod +x /tmp/deploy-script.sh",
+              "bash /tmp/deploy-script.sh"
             ]' \
             --region ${{ env.AWS_REGION }}
 
-          # Wait for deployment to complete
+      - name: Wait for deployment
+        run: |
+          echo "Waiting 60 seconds for deployment to complete..."
           sleep 60
 
-          # Check deployment status
+      - name: Check deployment status
+        run: |
           echo "Checking deployment status..."
           aws ssm send-command \
             --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
@@ -134,7 +260,7 @@ jobs:
             ]' \
             --region ${{ env.AWS_REGION }}
 
-      - name: Wait for deployment
+      - name: Wait for applications
         run: |
           echo "Waiting 30 seconds for applications to start..."
           sleep 30
