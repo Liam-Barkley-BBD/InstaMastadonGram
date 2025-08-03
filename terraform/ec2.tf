@@ -4,6 +4,7 @@ resource "aws_instance" "app" {
   key_name               = aws_key_pair.app.key_name
   vpc_security_group_ids = [aws_security_group.app.id]
   subnet_id              = aws_subnet.public.id
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance.name
 
   root_block_device {
     volume_size = 20

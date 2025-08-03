@@ -105,27 +105,34 @@ jobs:
           echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
           echo "EC2 Public IP: $PUBLIC_IP"
 
-      - name: Setup SSH key
+      - name: Get EC2 Instance ID
+        id: ec2-instance
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2-key.pem
-          chmod 600 ~/.ssh/ec2-key.pem
-          ssh-keyscan -H ${{ steps.ec2-ip.outputs.public_ip }} >> ~/.ssh/known_hosts
+          cd terraform
+          INSTANCE_ID=$(terraform output -raw instance_id 2>/dev/null || echo "")
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "Could not get EC2 instance ID from Terraform output"
+            exit 1
+          fi
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "EC2 Instance ID: $INSTANCE_ID"
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 using SSM
         run: |
-          echo "Starting automated deployment to EC2 using Docker Compose..."
+          echo "Starting automated deployment to EC2 using AWS Systems Manager..."
 
+          # Create deployment script
           cat > deploy-ec2.sh << 'EOF'
           #!/bin/bash
           set -e
 
           echo "Starting deployment on EC2 using Docker Compose..."
 
+          # Login to ECR
           aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.ecr-repos.outputs.backend_repo_url }}
 
           echo "Stopping existing containers..."
-          docker compose down || true
+          docker compose -f docker-compose.prod.yaml down || true
 
           echo "Pulling new images..."
           docker pull ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}
@@ -148,8 +155,34 @@ jobs:
           echo "Deployment completed successfully!"
           EOF
 
-          scp -i ~/.ssh/ec2-key.pem deploy-ec2.sh docker-compose.prod.yaml ec2-user@${{ steps.ec2-ip.outputs.public_ip }}:~/
-          ssh -i ~/.ssh/ec2-key.pem ec2-user@${{ steps.ec2-ip.outputs.public_ip }} "chmod +x ~/deploy-ec2.sh && ~/deploy-ec2.sh"
+          # Copy files to EC2 using SSM
+          echo "Copying deployment files to EC2..."
+          aws ssm send-command \
+            --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["mkdir -p ~/deployment"]' \
+            --region ${{ env.AWS_REGION }}
+
+          # Wait for command to complete
+          sleep 10
+
+          # Upload files using SSM
+          aws ssm send-command \
+            --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[\"cat > ~/deployment/deploy-ec2.sh << 'DEPLOY_EOF'\n$(cat deploy-ec2.sh)\nDEPLOY_EOF\", \"cat > ~/deployment/docker-compose.prod.yaml << 'COMPOSE_EOF'\n$(cat docker-compose.prod.yaml)\nCOMPOSE_EOF\"]" \
+            --region ${{ env.AWS_REGION }}
+
+          # Wait for command to complete
+          sleep 10
+
+          # Execute deployment script
+          echo "Executing deployment script on EC2..."
+          aws ssm send-command \
+            --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["chmod +x ~/deployment/deploy-ec2.sh", "cd ~/deployment && ./deploy-ec2.sh"]' \
+            --region ${{ env.AWS_REGION }}
 
       - name: Wait for deployment
         run: |

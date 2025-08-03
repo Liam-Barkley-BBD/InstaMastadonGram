@@ -81,7 +81,12 @@ resource "aws_iam_role_policy" "github_actions" {
           "ec2:CreateSubnet",
           "ec2:DeleteSubnet",
           "ec2:CreateTags",
-          "ec2:DeleteTags"
+          "ec2:DeleteTags",
+          "ssm:SendCommand",
+          "ssm:GetCommandInvocation",
+          "ssm:DescribeInstanceInformation",
+          "ssm:ListCommands",
+          "ssm:ListCommandInvocations"
         ]
         Resource = "*"
       },
@@ -164,6 +169,11 @@ resource "aws_iam_role_policy" "ec2_instance" {
       }
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_ssm" {
+  role       = aws_iam_role.ec2_instance.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "ec2_instance" {
