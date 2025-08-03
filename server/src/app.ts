@@ -8,7 +8,8 @@ import { integrateFederation } from "@fedify/express";
 import "./config/passport";
 import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
-import userRoutes from "./routes/users.routes.ts"
+import userRoutes from "./routes/users.routes.ts";
+import followRoutes from "./routes/follow.routes.ts"
 
 dotenv.config();
 
@@ -34,9 +35,10 @@ app.use(passport.session());
 
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
+app.use("/", followRoutes);
+app.use("/posts", postRoutes);
 
 app.use(integrateFederation(federation, (req) => undefined));
-app.use("/posts", postRoutes)
 
 app.get("/", (req, res) => {
   res.send("Hello, Fedify + Google Auth!");

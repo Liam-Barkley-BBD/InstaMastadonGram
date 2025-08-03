@@ -33,3 +33,5 @@ router.post("/follow", async (req, res) => {
   return res.status(200).json("Successfully sent a follow request");
 
 })
+
+export default router;
