@@ -73,12 +73,13 @@ jobs:
 
           # Update system
           echo "Updating system..."
-          sudo yum update -y
+          sudo apt update -y
+          sudo apt upgrade -y
 
           # Install Node.js
           echo "Installing Node.js..."
-          curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-          sudo yum install -y nodejs git
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+          sudo apt-get install -y nodejs git
 
           # Install PM2
           echo "Installing PM2..."
@@ -87,7 +88,7 @@ jobs:
           # Create application directory
           echo "Setting up application directory..."
           sudo mkdir -p /opt/instamastadongram
-          sudo chown ec2-user:ec2-user /opt/instamastadongram
+          sudo chown ubuntu:ubuntu /opt/instamastadongram
           cd /opt/instamastadongram
 
           # Clean and clone repository
@@ -115,16 +116,10 @@ jobs:
 
           # Install and start MongoDB
           echo "Installing MongoDB..."
-          sudo tee /etc/yum.repos.d/mongodb-org.repo << 'MONGOEOF'
-          [mongodb-org-7.0]
-          name=MongoDB Repository
-          baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/7.0/x86_64/
-          gpgcheck=1
-          enabled=1
-          gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc
-          MONGOEOF
-
-          sudo yum install -y mongodb-org
+          wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
+          echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+          sudo apt update
+          sudo apt install -y mongodb-org
           sudo systemctl start mongod
           sudo systemctl enable mongod
 
@@ -165,18 +160,19 @@ jobs:
               "",
               "# Update system",
               "echo \"Updating system...\"",
-              "sudo yum update -y",
+              "sudo apt update -y",
+              "sudo apt upgrade -y",
               "",
               "echo \"Installing Node.js...\"",
-              "curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -",
-              "sudo yum install -y nodejs git",
+              "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -",
+              "sudo apt-get install -y nodejs git",
               "",
               "echo \"Installing PM2...\"",
               "sudo npm install -g pm2",
               "",
               "echo \"Setting up application directory...\"",
               "sudo mkdir -p /opt/instamastadongram",
-              "sudo chown ec2-user:ec2-user /opt/instamastadongram",
+              "sudo chown ubuntu:ubuntu /opt/instamastadongram",
               "cd /opt/instamastadongram",
               "",
               "echo \"Cloning repository...\"",
@@ -200,16 +196,10 @@ jobs:
               "ENVEOF",
               "",
               "echo \"Installing MongoDB...\"",
-              "sudo tee /etc/yum.repos.d/mongodb-org.repo << '\''MONGOEOF'\''",
-              "[mongodb-org-7.0]",
-              "name=MongoDB Repository",
-              "baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/7.0/x86_64/",
-              "gpgcheck=1",
-              "enabled=1",
-              "gpgkey=https://www.mongodb.org/static/pgp/server-7.0.asc",
-              "MONGOEOF",
-              "",
-              "sudo yum install -y mongodb-org",
+              "wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -",
+              "echo \"deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse\" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list",
+              "sudo apt update",
+              "sudo apt install -y mongodb-org",
               "sudo systemctl start mongod",
               "sudo systemctl enable mongod",
               "",
