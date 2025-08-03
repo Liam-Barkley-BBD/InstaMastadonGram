@@ -26,3 +26,14 @@ variable "github_repository" {
   type        = string
   default     = "NoTablesAttached/InstaMastadonGram"
 }
+
+variable "budget_notification_emails" {
+  description = "List of email addresses to receive AWS Budget notifications"
+  type        = list(string)
+  default     = [
+    "joy@bbd.co.za",
+    "Liam.Barkley@bbd.co.za",
+    "Clive.Mmakola@bbd.co.za",
+    "Katleho.Myeza@bbd.co.za"
+  ]
+}
