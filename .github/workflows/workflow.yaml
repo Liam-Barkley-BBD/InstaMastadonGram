@@ -222,90 +222,90 @@ jobs:
             systemctl status mongod
             EOF
 
-  issue-certificates:
-    needs:
-    - deploy-api
-    - terraform
-    permissions:
-        id-token: write
-        contents: read
-    name: Issue Certificates
-    runs-on: ubuntu-latest
-    steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: arn:aws:iam::683044484462:role/github-oidc
-        aws-region: ${{ env.AWS_REGION }}
+  # issue-certificates:
+  #   needs:
+  #   - deploy-api
+  #   - terraform
+  #   permissions:
+  #       id-token: write
+  #       contents: read
+  #   name: Issue Certificates
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Configure AWS credentials
+  #     uses: aws-actions/configure-aws-credentials@v2
+  #     with:
+  #       role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+  #       aws-region: ${{ env.AWS_REGION }}
 
-    - name: Get secrets from AWS Key Store
-      uses: aws-actions/aws-secretsmanager-get-secrets@v2
-      with:
-        secret-ids: |
-          EC2_PRIVATE_KEY, privatekey
+  #   - name: Get secrets from AWS Key Store
+  #     uses: aws-actions/aws-secretsmanager-get-secrets@v2
+  #     with:
+  #       secret-ids: |
+  #         EC2_PRIVATE_KEY, privatekey
 
-    - name: Setup private key
-      run: |
-        echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
-        chmod 0500 privatekey.pem
+  #   - name: Setup private key
+  #     run: |
+  #       echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
+  #       chmod 0500 privatekey.pem
 
-    - name: Setup nginx proxy
-      run: |
-        EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #   - name: Setup nginx proxy
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
 
-        ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
 
-          sudo apt-get update
-          sudo apt-get install -y nginx
+  #         sudo apt-get update
+  #         sudo apt-get install -y nginx
 
-          sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
-          server {
-          listen 80;
-          server_name bbd-grad-project.co.za www.bbd-grad-project.co.za;
+  #         sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
+  #         server {
+  #         listen 80;
+  #         server_name bbd-grad-project.co.za www.bbd-grad-project.co.za;
 
-          location /.well-known/acme-challenge/ {
-              root /var/www/html;
-              try_files $uri =404;
-          }
+  #         location /.well-known/acme-challenge/ {
+  #             root /var/www/html;
+  #             try_files $uri =404;
+  #         }
 
-          location /api/ {
-              proxy_pass http://localhost:8000;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-          }
+  #         location /api/ {
+  #             proxy_pass http://localhost:8000;
+  #             proxy_http_version 1.1;
+  #             proxy_set_header Upgrade $http_upgrade;
+  #             proxy_set_header Connection 'upgrade';
+  #             proxy_set_header Host $host;
+  #             proxy_cache_bypass $http_upgrade;
+  #             proxy_set_header X-Real-IP $remote_addr;
+  #             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  #             proxy_set_header X-Forwarded-Proto $scheme;
+  #         }
 
-          location /.well-known/webfinger {
-              proxy_pass http://localhost:8000;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-          }
-        }
-        NGINX_CONF
-        EOF
+  #         location /.well-known/webfinger {
+  #             proxy_pass http://localhost:8000;
+  #             proxy_http_version 1.1;
+  #             proxy_set_header Upgrade $http_upgrade;
+  #             proxy_set_header Connection 'upgrade';
+  #             proxy_set_header Host $host;
+  #             proxy_cache_bypass $http_upgrade;
+  #             proxy_set_header X-Real-IP $remote_addr;
+  #             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  #             proxy_set_header X-Forwarded-Proto $scheme;
+  #         }
+  #       }
+  #       NGINX_CONF
+  #       EOF
 
-    - name: Verify and Reload nginx
-      run: |
-        EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-        ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-          sudo nginx -t && sudo systemctl reload nginx
-        '
+  #   - name: Verify and Reload nginx
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+  #         sudo nginx -t && sudo systemctl reload nginx
+  #       '
 
-    - name: Cerbot
-      run: |
-        EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-        ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-          sudo apt install certbot python3-certbot-nginx -y &&
-          sudo certbot --nginx -d bbd-grad-project.co.za -d www.bbd-grad-project.co.za --non-interactive --agree-tos --email liam.barkley@bbd.co.za
-        '
+  #   - name: Cerbot
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+  #         sudo apt install certbot python3-certbot-nginx -y &&
+  #         sudo certbot --nginx -d bbd-grad-project.co.za -d www.bbd-grad-project.co.za --non-interactive --agree-tos --email liam.barkley@bbd.co.za
+  #       '
