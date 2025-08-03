@@ -253,6 +253,9 @@ jobs:
       run: |
         EC2_HOST=${{ needs.terraform.outputs.ec2host }}
 
+        sudo apt-get update
+        sudo apt-get install -y nginx
+
         ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
         sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
         server {
