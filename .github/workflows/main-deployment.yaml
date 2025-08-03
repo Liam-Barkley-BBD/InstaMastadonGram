@@ -166,11 +166,137 @@ jobs:
           # Wait for command to complete
           sleep 10
 
-          # Upload files using SSM
+          # Create a simple deployment script on EC2
+          echo "Creating deployment script on EC2..."
           aws ssm send-command \
             --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[\"cat > ~/deployment/deploy-ec2.sh << 'DEPLOY_EOF'\n$(cat deploy-ec2.sh)\nDEPLOY_EOF\", \"cat > ~/deployment/docker-compose.prod.yaml << 'COMPOSE_EOF'\n$(cat docker-compose.prod.yaml)\nCOMPOSE_EOF\"]" \
+            --parameters 'commands=[
+              "echo \"#!/bin/bash\" > ~/deployment/deploy-ec2.sh",
+              "echo \"set -e\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"echo Starting deployment on EC2 using Docker Compose...\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.ecr-repos.outputs.backend_repo_url }}\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"echo Stopping existing containers...\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"docker compose -f docker-compose.prod.yaml down || true\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"echo Pulling new images...\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"docker pull ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"docker pull ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"echo Setting up environment variables...\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export BACKEND_IMAGE=\\\"${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export FRONTEND_IMAGE=\\\"${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export MONGO_ROOT_USERNAME=\\\"${{ secrets.MONGO_ROOT_USERNAME }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export MONGO_ROOT_PASSWORD=\\\"${{ secrets.MONGO_ROOT_PASSWORD }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export MONGO_DATABASE=\\\"${{ secrets.MONGO_DATABASE }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export SESSION_SECRET=\\\"${{ secrets.SESSION_SECRET }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export GOOGLE_CLIENT_ID=\\\"${{ secrets.GOOGLE_CLIENT_ID }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export GOOGLE_CLIENT_SECRET=\\\"${{ secrets.GOOGLE_CLIENT_SECRET }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"export GOOGLE_CALLBACK_URL=\\\"${{ secrets.GOOGLE_CALLBACK_URL }}\\\"\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"echo Starting services with Docker Compose...\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"docker compose -f docker-compose.prod.yaml up -d\" >> ~/deployment/deploy-ec2.sh",
+              "echo \"echo Deployment completed successfully!\" >> ~/deployment/deploy-ec2.sh"
+            ]' \
+            --region ${{ env.AWS_REGION }}
+
+          # Wait for command to complete
+          sleep 10
+
+          # Copy docker-compose.prod.yaml to EC2
+          echo "Copying docker-compose.prod.yaml to EC2..."
+          aws ssm send-command \
+            --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "cat > ~/deployment/docker-compose.prod.yaml << '\''EOF'\''",
+              "version: '\''3.8'\''",
+              "services:",
+              "  mongodb:",
+              "    image: mongo:7.0",
+              "    container_name: instamastadongram-mongodb",
+              "    restart: unless-stopped",
+              "    environment:",
+              "      MONGO_INITDB_ROOT_USERNAME: \"${{ secrets.MONGO_ROOT_USERNAME }}\"",
+              "      MONGO_INITDB_ROOT_PASSWORD: \"${{ secrets.MONGO_ROOT_PASSWORD }}\"",
+              "      MONGO_INITDB_DATABASE: \"${{ secrets.MONGO_DATABASE }}\"",
+              "    volumes:",
+              "      - mongodb_data:/data/db",
+              "    networks:",
+              "      - app-network",
+              "    healthcheck:",
+              "      test: [\"CMD\", \"mongosh\", \"--eval\", \"db.adminCommand('\''ping'\'')\"]",
+              "      interval: 30s",
+              "      timeout: 10s",
+              "      retries: 3",
+              "",
+              "  backend:",
+              "    image: \"${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}\"",
+              "    container_name: instamastadongram-backend",
+              "    restart: unless-stopped",
+              "    environment:",
+              "      - PORT=8000",
+              "      - MONGO_URI=mongodb://${{ secrets.MONGO_ROOT_USERNAME }}:${{ secrets.MONGO_ROOT_PASSWORD }}@mongodb:27017/${{ secrets.MONGO_DATABASE }}?authSource=admin",
+              "      - SESSION_SECRET=${{ secrets.SESSION_SECRET }}",
+              "      - GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}",
+              "      - GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}",
+              "      - GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}",
+              "    volumes:",
+              "      - uploads_data:/app/server/uploads",
+              "    ports:",
+              "      - \"8000:8000\"",
+              "    depends_on:",
+              "      mongodb:",
+              "        condition: service_healthy",
+              "    networks:",
+              "      - app-network",
+              "    healthcheck:",
+              "      test:",
+              "        [",
+              "          \"CMD\",",
+              "          \"wget\",",
+              "          \"--no-verbose\",",
+              "          \"--tries=1\",",
+              "          \"--spider\",",
+              "          \"http://localhost:8000/health\",",
+              "        ]",
+              "      interval: 30s",
+              "      timeout: 10s",
+              "      retries: 3",
+              "",
+              "  frontend:",
+              "    image: \"${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}\"",
+              "    container_name: instamastadongram-frontend",
+              "    restart: unless-stopped",
+              "    ports:",
+              "      - \"80:80\"",
+              "    depends_on:",
+              "      backend:",
+              "        condition: service_healthy",
+              "    networks:",
+              "      - app-network",
+              "    healthcheck:",
+              "      test:",
+              "        [",
+              "          \"CMD\",",
+              "          \"wget\",",
+              "          \"--no-verbose\",",
+              "          \"--tries=1\",",
+              "          \"--spider\",",
+              "          \"http://localhost:80/\",",
+              "        ]",
+              "      interval: 30s",
+              "      timeout: 10s",
+              "      retries: 3",
+              "",
+              "volumes:",
+              "  mongodb_data:",
+              "    driver: local",
+              "  uploads_data:",
+              "    driver: local",
+              "",
+              "networks:",
+              "  app-network:",
+              "    driver: bridge",
+              "EOF"
+            ]' \
             --region ${{ env.AWS_REGION }}
 
           # Wait for command to complete
