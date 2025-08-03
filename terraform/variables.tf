@@ -19,4 +19,10 @@ variable "project_name" {
 variable "ssh_public_key" {
   description = "SSH public key for EC2 access"
   type        = string
-} 
+}
+
+variable "github_repository" {
+  description = "GitHub repository"
+  type        = string
+  default     = "NoTablesAttached/InstaMastadonGram"
+}
