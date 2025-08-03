@@ -1,60 +1,28 @@
-name: Deploy to EC2
+name: Build and Push to ECR
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
-  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
-  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
-  ECS_TASK_DEFINITION: ${{ vars.ECS_TASK_DEFINITION }}
-
-permissions:
-  id-token: write
-  contents: read
+  PROJECT_NAME: ${{ vars.ECR_REPOSITORY }}
 
 jobs:
-  test:
+  build-and-push:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "latest"
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Run frontend tests
-        working-directory: ./frontend
-        run: npm run lint
-
-      - name: Install backend dependencies
-        working-directory: ./server
-        run: npm ci
-
-      - name: Run backend tests
-        working-directory: ./server
-        run: npm run lint || echo "No lint script found"
-
-  build-and-deploy:
-    needs: test
-    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
@@ -64,81 +32,241 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push backend image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-backend:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY-backend:latest .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-backend:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-backend:latest
-          echo "backend_image=$ECR_REGISTRY/$ECR_REPOSITORY-backend:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build, tag, and push frontend image to Amazon ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Get ECR repository URLs
+        id: ecr-repos
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY-frontend:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY-frontend:latest -f frontend/Dockerfile .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-frontend:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-frontend:latest
-          echo "frontend_image=$ECR_REGISTRY/$ECR_REPOSITORY-frontend:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          BACKEND_REPO_URL=$(aws ecr describe-repositories --repository-names "${PROJECT_NAME}-backend" --region $AWS_REGION --query 'repositories[0].repositoryUri' --output text)
+          FRONTEND_REPO_URL=$(aws ecr describe-repositories --repository-names "${PROJECT_NAME}-frontend" --region $AWS_REGION --query 'repositories[0].repositoryUri' --output text)
+          echo "backend_repo_url=$BACKEND_REPO_URL" >> $GITHUB_OUTPUT
+          echo "frontend_repo_url=$FRONTEND_REPO_URL" >> $GITHUB_OUTPUT
+
+      - name: Generate version tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "version=pr-${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}
+            ${{ steps.ecr-repos.outputs.backend_repo_url }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}
+            ${{ steps.ecr-repos.outputs.frontend_repo_url }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image URLs
+        run: |
+          echo "Backend image: ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}"
+          echo "Frontend image: ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}"
+
+      - name: Get EC2 public IP
+        id: ec2-ip
+        run: |
+          cd terraform
+          PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null || echo "")
+          if [ -z "$PUBLIC_IP" ]; then
+            echo "Could not get EC2 public IP from Terraform output"
+            exit 1
+          fi
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "EC2 Public IP: $PUBLIC_IP"
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2-key.pem
+          chmod 600 ~/.ssh/ec2-key.pem
+          ssh-keyscan -H ${{ steps.ec2-ip.outputs.public_ip }} >> ~/.ssh/known_hosts
 
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Update environment variables
-            cat > .env << EOF
-            MONGO_ROOT_USERNAME=${{ secrets.MONGO_ROOT_USERNAME }}
-            MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
-            MONGO_DATABASE=${{ secrets.MONGO_DATABASE }}
-            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}
-            EOF
-
-            # Pull latest images
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}-backend:latest
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}-frontend:latest
-
-            # Stop and remove existing containers
-            docker-compose down || true
-
-            # Start services
-            docker-compose up -d
-
-            # Clean up old images
-            docker image prune -f
-
-            echo "Deployment completed successfully!"
-
-      - name: Health check
         run: |
-          echo "Waiting for services to be ready..."
-          sleep 30
+          echo "Starting automated deployment to EC2 using Docker Compose..."
 
-          # Check if services are responding
-          curl -f http://${{ secrets.EC2_HOST }}/health || exit 1
-          echo "Health check passed!"
+          cat > deploy-ec2.sh << 'EOF'
+          #!/bin/bash
+          set -e
 
-  rollback:
-    runs-on: ubuntu-latest
-    if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+          echo "Starting deployment on EC2 using Docker Compose..."
 
-    steps:
-      - name: Rollback deployment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "Rolling back deployment..."
-            docker-compose down
-            docker-compose up -d
-            echo "Rollback completed"
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.ecr-repos.outputs.backend_repo_url }}
+
+          echo "Stopping existing containers..."
+          docker-compose down || true
+
+          echo "Pulling new images..."
+          docker pull ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}
+          docker pull ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}
+
+          echo "Creating production docker-compose.yaml with ECR images..."
+          cat > docker-compose.prod.yaml << 'EOF'
+          version: '3.8'
+          services:
+            mongodb:
+              image: mongo:7.0
+              container_name: ${{ vars.ECR_REPOSITORY }}-mongodb
+              restart: unless-stopped
+              environment:
+                MONGO_INITDB_ROOT_USERNAME: ${{ secrets.MONGO_ROOT_USERNAME }}
+                MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.MONGO_ROOT_PASSWORD }}
+                MONGO_INITDB_DATABASE: ${{ secrets.MONGO_DATABASE }}
+              volumes:
+                - mongodb_data:/data/db
+              networks:
+                - app-network
+              healthcheck:
+                test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+            backend:
+              image: ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}
+              container_name: ${{ vars.ECR_REPOSITORY }}-backend
+              restart: unless-stopped
+              environment:
+                - PORT=8000
+                - MONGO_URI=mongodb://${{ secrets.MONGO_ROOT_USERNAME }}:${{ secrets.MONGO_ROOT_PASSWORD }}@mongodb:27017/${{ secrets.MONGO_DATABASE }}?authSource=admin
+                - SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+              volumes:
+                - uploads_data:/app/server/uploads
+              ports:
+                - "8000:8000"
+              depends_on:
+                mongodb:
+                  condition: service_healthy
+              networks:
+                - app-network
+              healthcheck:
+                test:
+                  [
+                    "CMD",
+                    "wget",
+                    "--no-verbose",
+                    "--tries=1",
+                    "--spider",
+                    "http://localhost:8000/health",
+                  ]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+            frontend:
+              image: ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}
+              container_name: ${{ vars.ECR_REPOSITORY }}-frontend
+              restart: unless-stopped
+              ports:
+                - "80:80"
+              depends_on:
+                backend:
+                  condition: service_healthy
+              networks:
+                - app-network
+              healthcheck:
+                test:
+                  [
+                    "CMD",
+                    "wget",
+                    "--no-verbose",
+                    "--tries=1",
+                    "--spider",
+                    "http://localhost:80/",
+                  ]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+          volumes:
+            mongodb_data:
+              driver: local
+            uploads_data:
+              driver: local
+
+          networks:
+            app-network:
+              driver: bridge
+          EOF
+
+          echo "Starting services with Docker Compose..."
+          docker-compose -f docker-compose.prod.yml up -d
+
+          echo "Deployment completed successfully!"
+          EOF
+
+          scp -i ~/.ssh/ec2-key.pem deploy-ec2.sh docker-compose.prod.yml ec2-user@${{ steps.ec2-ip.outputs.public_ip }}:~/
+          ssh -i ~/.ssh/ec2-key.pem ec2-user@${{ steps.ec2-ip.outputs.public_ip }} "chmod +x ~/deploy-ec2.sh && ~/deploy-ec2.sh"
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting 60 seconds for containers to start..."
+          sleep 60
+
+      - name: Health check backend
+        run: |
+          echo "Checking backend health at http://${{ steps.ec2-ip.outputs.public_ip }}:8000/health"
+          for i in {1..10}; do
+            if curl -f -s http://${{ steps.ec2-ip.outputs.public_ip }}:8000/health > /dev/null; then
+              echo "Backend health check passed"
+              break
+            else
+              echo "Backend health check attempt $i/10 failed, retrying in 5 seconds..."
+              if [ $i -eq 10 ]; then
+                echo "Backend health check failed after 10 attempts"
+                exit 1
+              fi
+              sleep 5
+            fi
+          done
+
+      - name: Health check frontend
+        run: |
+          echo "Checking frontend health at http://${{ steps.ec2-ip.outputs.public_ip }}"
+          for i in {1..10}; do
+            if curl -f -s http://${{ steps.ec2-ip.outputs.public_ip }} > /dev/null; then
+              echo "Frontend health check passed"
+              break
+            else
+              echo "Frontend health check attempt $i/10 failed, retrying in 5 seconds..."
+              if [ $i -eq 10 ]; then
+                echo "Frontend health check failed after 10 attempts"
+                exit 1
+              fi
+              sleep 5
+            fi
+          done
+
+      - name: Deployment summary
+        run: |
+          echo "Full CI/CD Pipeline Completed Successfully!"
+          echo ""
+          echo "Application Details:"
+          echo "   Application URL: http://${{ steps.ec2-ip.outputs.public_ip }}"
+          echo "   Backend API: http://${{ steps.ec2-ip.outputs.public_ip }}:8000"
+          echo ""
+          echo "Deployed Images:"
+          echo "   Backend: ${{ steps.ecr-repos.outputs.backend_repo_url }}:${{ steps.version.outputs.version }}"
+          echo "   Frontend: ${{ steps.ecr-repos.outputs.frontend_repo_url }}:${{ steps.version.outputs.version }}"
+          echo ""
+          echo "All health checks passed!"
+          echo "Application is live and ready for use!"
