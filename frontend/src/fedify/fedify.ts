@@ -5,13 +5,9 @@ export class Fedify {
         url: string,
         options: RequestInit = {},
         retryCount = 0,
-        isFedify: boolean
     ): Promise<any> {
         const defaultHeaders: Record<string, string> = {
-            'Content-Type': 'application/activity+json',
-            ...(isFedify && {
-                'Accept': 'application/activity+json, application/ld+json; profile=""',
-            }),
+            'Content-Type': 'application/json',
         };
 
         const requestOptions: RequestInit = {
@@ -29,33 +25,33 @@ export class Fedify {
         } catch (error) {
             if (retryCount < 3) {
                 await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-                return this.makeRequest(url, options, retryCount + 1, isFedify);
+                return this.makeRequest(url, options, retryCount + 1);
             }
             throw error;
         }
     }
 
     getLoggedInUser = async () => {
-        return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0, false);
+        return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
     };
 
     getProfile = async (handle: string) => {
-        return this.makeRequest(`${this.API_BASE_URL}/users/${handle}/profile`, {}, 0, false);
+        return this.makeRequest(`${this.API_BASE_URL}/users/${handle}/profile`, {}, 0);
     };
 
     followUser = async (handle: string) => {
         return this.makeRequest(`${this.API_BASE_URL}/users/${handle}/follow`, {
             method: "POST",
-        }, 0, true);
+        }, 0);
     };
 
     unfollowUser = async (handle: string) => {
         return this.makeRequest(`${this.API_BASE_URL}/users/${handle}/unfollow`, {
             method: "DELETE",
-        }, 0, false);
+        }, 0);
     };
 
     searchUsers = async (searchText: string) => {
-        return this.makeRequest(`${this.API_BASE_URL}/users/search?query=${encodeURIComponent(searchText)}`, {}, 0, false);
+        return this.makeRequest(`${this.API_BASE_URL}/users/search?query=${encodeURIComponent(searchText)}`, {}, 0);
     };
 }
