@@ -13,7 +13,7 @@ variable "instance_type" {
 variable "project_name" {
   description = "Project name for resource tagging"
   type        = string
-  default     = "insta-mastadon-gram"
+  default     = "instamastadongram"
 }
 
 variable "ssh_public_key" {

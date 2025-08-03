@@ -37,6 +37,23 @@ resource "aws_iam_role_policy" "github_actions" {
       {
         Effect = "Allow"
         Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:BatchDeleteImage",
+          "ecr:GetLifecyclePolicy",
+          "ecr:GetLifecyclePolicyPreview",
+          "ecr:ListTagsForResource",
+          "ecr:DescribeImageScanFindings",
           "ec2:DescribeInstances",
           "ec2:DescribeInstanceStatus",
           "ec2:DescribeSecurityGroups",
@@ -107,6 +124,57 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
+resource "aws_iam_role" "ec2_instance" {
+  name = "${var.project_name}-ec2-instance-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.project_name}-ec2-instance-role"
+  }
+}
+
+resource "aws_iam_role_policy" "ec2_instance" {
+  name = "${var.project_name}-ec2-instance-policy"
+  role = aws_iam_role.ec2_instance.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "ec2_instance" {
+  name = "${var.project_name}-ec2-instance-profile"
+  role = aws_iam_role.ec2_instance.name
+
+  tags = {
+    Name = "${var.project_name}-ec2-instance-profile"
+  }
+}
+
 data "aws_caller_identity" "current" {}
 
 output "github_actions_role_arn" {
@@ -117,4 +185,9 @@ output "github_actions_role_arn" {
 output "github_actions_role_name" {
   description = "Name of the IAM role for GitHub Actions"
   value       = aws_iam_role.github_actions.name
-} 
+}
+
+output "ec2_instance_profile_arn" {
+  description = "ARN of the EC2 instance profile"
+  value       = aws_iam_instance_profile.ec2_instance.arn
+}

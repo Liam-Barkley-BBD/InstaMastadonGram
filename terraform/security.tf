@@ -37,4 +37,4 @@ resource "aws_security_group" "app" {
   tags = {
     Name = "${var.project_name}-app-sg"
   }
-} 
+}

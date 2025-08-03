@@ -28,4 +28,4 @@ resource "aws_eip" "app" {
   tags = {
     Name = "${var.project_name}-eip"
   }
-} 
+}
