@@ -91,7 +91,7 @@ jobs:
         id: init
         run: |
           cd terraform
-          terraform init -backend-config="bucket=${{ vars.ECR_REPOSITORY }}-tf-state" -backend-config="key=terraformstate/terraform.tfstate" -backend-config="region=${{ vars.AWS_REGION }}"
+          terraform init
 
       - name: Extract Terraform Outputs
         uses: dflook/terraform-output@v1
