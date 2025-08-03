@@ -265,6 +265,7 @@ jobs:
 
           location /.well-known/acme-challenge/ {
               root /var/www/html;
+              try_files $uri =404;
           }
 
           location /api/ {
