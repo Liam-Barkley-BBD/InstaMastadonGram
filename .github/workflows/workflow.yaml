@@ -52,7 +52,7 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="bucket=instamastadongram-tf-state" -backend-config="tf-state.tf" -backend-config="region=${{ env.AWS_REGION }}"
+        run: terraform init -backend-config="bucket=instamastadongram-tf-state" -backend-config="key=tf-state.tf" -backend-config="region=${{ env.AWS_REGION }}"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
