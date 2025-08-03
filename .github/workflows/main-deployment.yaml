@@ -5,297 +5,57 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-
-env:
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  PROJECT_NAME: ${{ vars.ECR_REPOSITORY }}
+  
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.0.1
-          terraform_wrapper: false
-
-      - name: Terraform Init
+      - name: Deploy to Backend EC2
         run: |
-          cd terraform
-          terraform init
-
-      - name: Get EC2 Instance ID
-        id: ec2-instance
-        run: |
-          cd terraform
-          INSTANCE_ID=$(terraform output -raw instance_id 2>/dev/null || echo "")
-          if [ -z "$INSTANCE_ID" ]; then
-            echo "Could not get EC2 instance ID from Terraform output"
-            exit 1
-          fi
-          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
-          echo "EC2 Instance ID: $INSTANCE_ID"
-
-      - name: Get EC2 public IP
-        id: ec2-ip
-        run: |
-          cd terraform
-          PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null || echo "")
-          if [ -z "$PUBLIC_IP" ]; then
-            echo "Could not get EC2 public IP from Terraform output"
-            exit 1
-          fi
-          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
-          echo "EC2 Public IP: $PUBLIC_IP"
-
-      - name: Create deployment script
-        run: |
-          cat > deploy-script.sh << 'EOF'
-          #!/bin/bash
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
           set -e
 
-          echo "=== Starting Deployment ==="
+          sudo chown -R ubuntu:ubuntu /home/ubuntu/instamastadongram
 
-          # Update system
-          echo "Updating system..."
-          sudo apt update -y
-          sudo apt upgrade -y
+          cd /home/ubuntu/instamastadongram
+          git config --global --add safe.directory /home/ubuntu/instamastadongram
+          git reset --hard HEAD
+          git clean -fd
+          git pull origin main
+          cd server
+          npm install
+          pm2 restart instamastadongram-backend || pm2 start src/index.ts --name instamastadongram-backend
+          EOF 
+          
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-          # Install Node.js
-          echo "Installing Node.js..."
-          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-          sudo apt-get install -y nodejs git
-
-          # Install PM2
-          echo "Installing PM2..."
-          sudo npm install -g pm2
-
-          # Create application directory
-          echo "Setting up application directory..."
-          sudo mkdir -p /opt/instamastadongram
-          sudo chown ubuntu:ubuntu /opt/instamastadongram
-          cd /opt/instamastadongram
-
-          # Clean and clone repository
-          echo "Cloning repository..."
-          rm -rf * || true
-          git clone https://github.com/${{ github.repository }}.git .
-
-          # Install dependencies
-          echo "Installing server dependencies..."
-          cd server && npm install && cd ..
-
-          echo "Installing frontend dependencies..."
-          cd frontend && npm install && npm run build && cd ..
-
-          # Create environment file
-          echo "Creating environment file..."
-          cat > server/.env << 'ENVEOF'
-          PORT=8000
-          MONGO_URI=mongodb://localhost:27017/instaMastadonGram
-          SESSION_SECRET=${{ secrets.SESSION_SECRET }}
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_CALLBACK_URL=http://${{ steps.ec2-ip.outputs.public_ip }}:8000/auth/google/callback
-          ENVEOF
-
-          # Install and start MongoDB
-          echo "Installing MongoDB..."
-          wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -
-          echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-          sudo apt update
-          sudo apt install -y mongodb-org
-          sudo systemctl start mongod
-          sudo systemctl enable mongod
-
-          # Wait for MongoDB to start
-          echo "Waiting for MongoDB to start..."
-          sleep 10
-
-          # Initialise MongoDB
-          echo "Initialising MongoDB..."
-          mongosh --eval "$(cat mongo-init.js)"
-
-          # Start applications with PM2
-          echo "Starting applications..."
-          pm2 delete all || true
-          cd /opt/instamastadongram/server && pm2 start npm --name backend -- start
-          cd /opt/instamastadongram/frontend && pm2 start npm --name frontend -- run preview -- --port 80 --host 0.0.0.0
-          pm2 save
-          pm2 startup
-
-          echo "=== Deployment completed ==="
-          pm2 status
+      - name: Deploy to Frontend EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            sudo chown -R ubuntu:ubuntu /var/www/frontend
+            cd /var/www/frontend
+            git config --global --add safe.directory /var/www/frontend
+            git reset --hard HEAD
+            git clean -fd
+            git pull origin main
+            cd frontend
+            npm install
+            npm run build
+            sudo cp -r dist/* /var/www/html/
+            sudo systemctl restart nginx
           EOF
-
-      - name: Upload and execute deployment script
-        run: |
-          echo "Uploading deployment script to EC2..."
-
-          # Upload the script
-          aws ssm send-command \
-            --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "cat > /tmp/deploy-script.sh << '\''SCRIPTEOF'\''",
-              "#!/bin/bash",
-              "set -e",
-              "",
-              "echo \"=== Starting Deployment ===\"",
-              "",
-              "# Update system",
-              "echo \"Updating system...\"",
-              "sudo apt update -y",
-              "sudo apt upgrade -y",
-              "",
-              "echo \"Installing Node.js...\"",
-              "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -",
-              "sudo apt-get install -y nodejs git",
-              "",
-              "echo \"Installing PM2...\"",
-              "sudo npm install -g pm2",
-              "",
-              "echo \"Setting up application directory...\"",
-              "sudo mkdir -p /opt/instamastadongram",
-              "sudo chown ubuntu:ubuntu /opt/instamastadongram",
-              "cd /opt/instamastadongram",
-              "",
-              "echo \"Cloning repository...\"",
-              "rm -rf * || true",
-              "git clone https://github.com/${{ github.repository }}.git .",
-              "",
-              "echo \"Installing server dependencies...\"",
-              "cd server && npm install && cd ..",
-              "",
-              "echo \"Installing frontend dependencies...\"",
-              "cd frontend && npm install && npm run build && cd ..",
-              "",
-              "echo \"Creating environment file...\"",
-              "cat > server/.env << '\''ENVEOF'\''",
-              "PORT=8000",
-              "MONGO_URI=mongodb://localhost:27017/instaMastadonGram",
-              "SESSION_SECRET=${{ secrets.SESSION_SECRET }}",
-              "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}",
-              "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}",
-              "GOOGLE_CALLBACK_URL=http://${{ steps.ec2-ip.outputs.public_ip }}:8000/auth/google/callback",
-              "ENVEOF",
-              "",
-              "echo \"Installing MongoDB...\"",
-              "wget -qO - https://www.mongodb.org/static/pgp/server-7.0.asc | sudo apt-key add -",
-              "echo \"deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse\" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list",
-              "sudo apt update",
-              "sudo apt install -y mongodb-org",
-              "sudo systemctl start mongod",
-              "sudo systemctl enable mongod",
-              "",
-              "echo \"Waiting for MongoDB to start...\"",
-              "sleep 10",
-              "",
-              "echo \"Initialising MongoDB...\"",
-              "mongosh --eval \"$(cat mongo-init.js)\"",
-              "",
-              "echo \"Starting applications...\"",
-              "pm2 delete all || true",
-              "cd /opt/instamastadongram/server && pm2 start npm --name backend -- start",
-              "cd /opt/instamastadongram/frontend && pm2 start npm --name frontend -- run preview -- --port 80 --host 0.0.0.0",
-              "pm2 save",
-              "pm2 startup",
-              "",
-              "echo \"=== Deployment completed ===\"",
-              "pm2 status",
-              "SCRIPTEOF",
-              "",
-              "chmod +x /tmp/deploy-script.sh",
-              "bash /tmp/deploy-script.sh"
-            ]' \
-            --region ${{ env.AWS_REGION }}
-
-      - name: Wait for deployment
-        run: |
-          echo "Waiting 60 seconds for deployment to complete..."
-          sleep 60
-
-      - name: Check deployment status
-        run: |
-          echo "Checking deployment status..."
-          aws ssm send-command \
-            --instance-ids ${{ steps.ec2-instance.outputs.instance_id }} \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "echo === PM2 Status ===",
-              "pm2 status",
-              "echo === Process Status ===",
-              "ps aux | grep -E '\''(node|pm2)'\''",
-              "echo === Network Status ===",
-              "netstat -tlnp | grep -E '\'':(80|8000|27017)'\''",
-              "echo === MongoDB Status ===",
-              "sudo systemctl status mongod",
-              "echo === Application Logs ===",
-              "pm2 logs --lines 10"
-            ]' \
-            --region ${{ env.AWS_REGION }}
-
-      - name: Wait for applications
-        run: |
-          echo "Waiting 30 seconds for applications to start..."
-          sleep 30
-
-      - name: Health check backend
-        run: |
-          echo "Checking backend health at http://${{ steps.ec2-ip.outputs.public_ip }}:8000/health"
-          for i in {1..10}; do
-            if curl -f -s http://${{ steps.ec2-ip.outputs.public_ip }}:8000/health > /dev/null; then
-              echo "Backend health check passed"
-              break
-            else
-              echo "Backend health check attempt $i/10 failed, retrying in 5 seconds..."
-              if [ $i -eq 10 ]; then
-                echo "Backend health check failed after 10 attempts"
-                exit 1
-              fi
-              sleep 5
-            fi
-          done
-
-      - name: Health check frontend
-        run: |
-          echo "Checking frontend health at http://${{ steps.ec2-ip.outputs.public_ip }}"
-          for i in {1..10}; do
-            if curl -f -s http://${{ steps.ec2-ip.outputs.public_ip }} > /dev/null; then
-              echo "Frontend health check passed"
-              break
-            else
-              echo "Frontend health check attempt $i/10 failed, retrying in 5 seconds..."
-              if [ $i -eq 10 ]; then
-                echo "Frontend health check failed after 10 attempts"
-                exit 1
-              fi
-              sleep 5
-            fi
-          done
-
-      - name: Deployment summary
-        run: |
-          echo "Simple Deployment Completed Successfully!"
-          echo ""
-          echo "Application Details:"
-          echo "   Application URL: http://${{ steps.ec2-ip.outputs.public_ip }}"
-          echo "   Backend API: http://${{ steps.ec2-ip.outputs.public_ip }}:8000"
-          echo ""
-          echo "All health checks passed!"
-          echo "Application is live and ready for use!"
