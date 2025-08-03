@@ -26,6 +26,14 @@ resource "aws_security_group" "app" {
     description = "HTTPS access"
   }
 
+  ingress {
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Backend API access"
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
