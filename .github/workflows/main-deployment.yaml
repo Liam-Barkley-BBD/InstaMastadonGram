@@ -89,7 +89,15 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config="bucket=${{ vars.ECR_REPOSITORY }}-tf-state" -backend-config="key=terraformstate/terraform.tfstate" -backend-config="region=${{ vars.AWS_REGION }}"
+        run: |
+          cd terraform
+          terraform init -backend-config="bucket=${{ vars.ECR_REPOSITORY }}-tf-state" -backend-config="key=terraformstate/terraform.tfstate" -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: Extract Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
+        with:
+          path: terraform
 
       - name: Get EC2 public IP
         id: ec2-ip
