@@ -206,34 +206,44 @@ federation
 
 federation
   .setFollowersDispatcher("/users/{identifier}/followers", async (ctx, identifier, cursor) => {
-    const followingActor = await Actor.findOne({ handle: identifier });
-    if (!followingActor) return null;
+      const PAGE_SIZE = 10;
 
-    const PAGE_SIZE = 10;
-    const numericCursor = parseInt(cursor ?? "0", 10);
+      if (cursor == null) return null;
+      const page = parseInt(cursor, 10);
+      if (isNaN(page) || page < 1) return null;
 
-    const follows = await FollowModel.find({ following: followingActor._id })
-      .sort({ _id: -1 })
-      .skip(numericCursor)
-      .limit(PAGE_SIZE)
-      .populate<{ follower: ActorDoc }>("follower");
+      const followingActor = await Actor.findOne({ handle: identifier });
+      if (!followingActor) return null;
 
-    const items = follows
-      .filter(f => !!f.follower?.uri && !!f.follower?.inboxUri)
-      .map(f => ({
-        id: new URL(f.follower!.uri),
-        inboxId: new URL(f.follower!.inboxUri),
-      }));
+      const skip = (page - 1) * PAGE_SIZE;
 
-    const nextCursor = items.length === PAGE_SIZE ? `${numericCursor + PAGE_SIZE}` : undefined;
+      const follows = await FollowModel.find({ following: followingActor._id })
+        .sort({ _id: -1 })
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .populate<{ follower: ActorDoc }>("follower");
 
-    return {
-      items, // ✅ now Recipient[]
-      nextCursor,
-    };
-  })
+      const items = follows
+        .filter(f => !!f.follower?.uri && !!f.follower?.inboxUri)
+        .map(f => ({
+          id: new URL(f.follower!.uri),
+          inboxId: new URL(f.follower!.inboxUri),
+          endpoints: {
+            sharedInbox: f.follower!.inboxUri ? new URL(f.follower!.inboxUri) : null,
+          },
+        }));
 
-  .setFirstCursor(async (ctx, identifier) => "0")
+      const totalItems = await FollowModel.countDocuments({ following: followingActor._id });
+      const nextCursor = skip + PAGE_SIZE < totalItems ? String(page + 1) : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }
+  )
+
+  .setFirstCursor(async (ctx, identifier) => "1")
 
   .setCounter(async (ctx, identifier) => {
     const followingActor = await Actor.findOne({ handle: identifier });
