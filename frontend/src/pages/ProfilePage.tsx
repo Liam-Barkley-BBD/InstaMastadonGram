@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import './styles/ProfilePage.css';
+import './ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 
 interface UserProfile {
