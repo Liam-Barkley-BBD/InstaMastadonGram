@@ -2,6 +2,35 @@ import { useEffect, useState } from 'react';
 import './ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 
+interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  url: string;
+  avatar?: string;
+}
+
+interface PostContent {
+  type: string;
+  mediaType?: string;
+  url?: string;
+  name?: string;
+  blurhash?: string;
+  focalPoint?: number[];
+  width?: number;
+  height?: number;
+}
+
+interface Post {
+  id: string;
+  content: string | PostContent[];
+  publishedDate: string;
+  url: string;
+  replies: number;
+  shares: number;
+  likes: number;
+}
+
 interface UserProfile {
   id: string;
   username: string;
@@ -10,9 +39,9 @@ interface UserProfile {
   url: string;
   publishedDate: string;
   discoverable: boolean;
-  followers: any[];
-  following: any[];
-  posts: any[];
+  followers: User[];
+  following: User[];
+  posts: Post[];
   followersCount: number;
   followingCount: number;
   postsCount: number;
@@ -41,6 +70,41 @@ const ProfilePage = () => {
 
     fetchProfile();
   }, []); // Empty dependency array means this runs once on mount
+
+  const renderPostContent = (content: string | PostContent[]) => {
+    if (typeof content === 'string') {
+      return (
+        <div className="post-content">
+          <div className="post-text">
+            <p>{content}</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (Array.isArray(content)) {
+      return (
+        <div className="post-content">
+          {content.map((item, index) => {
+            if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
+              return (
+                <div key={index} className="post-image">
+                  <img 
+                    src={item.url} 
+                    alt={item.name || 'Post image'} 
+                    loading="lazy"
+                  />
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   if (loading) {
     return (
@@ -160,9 +224,19 @@ const ProfilePage = () => {
           <section className="gallery">
             {profile.posts && profile.posts.length > 0 ? (
               <div className="gallery-grid">
-                {profile.posts.slice(0, 6).map((_, index) => (
-                  <article key={index} className="gallery-item">
-                    {/* You can add post content here based on your post structure */}
+                {profile.posts.slice(0, 6).map((post, index) => (
+                  <article key={post.id || index} className="gallery-item">
+                    {renderPostContent(post.content)}
+                    <div className="post-meta">
+                      <span className="post-date">
+                        {new Date(post.publishedDate).toLocaleDateString()}
+                      </span>
+                      <div className="post-stats">
+                        <span>♥ {post.likes}</span>
+                        <span>↗ {post.shares}</span>
+                        <span>💬 {post.replies}</span>
+                      </div>
+                    </div>
                   </article>
                 ))}
               </div>
