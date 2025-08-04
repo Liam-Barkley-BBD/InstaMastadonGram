@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import type { UserProfile } from "../types";
 
-import "./SearchUsers.css";
+import "./styles/SearchUsers.css";
 
 const mockUsers = [
   {
