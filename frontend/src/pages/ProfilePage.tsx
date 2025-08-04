@@ -26,8 +26,6 @@ interface Post {
   content: string | PostContent[];
   publishedDate: string;
   url: string;
-  replies: number;
-  shares: number;
   likes: number;
 }
 
@@ -38,7 +36,6 @@ interface UserProfile {
   bio: string;
   url: string;
   publishedDate: string;
-  discoverable: boolean;
   followers: User[];
   following: User[];
   posts: Post[];
@@ -57,8 +54,7 @@ const ProfilePage = () => {
       try {
         setLoading(true);
         const x = new FedifyHandler();
-        const profileData = await x.getProfile("liambarkley");
-        console.log(JSON.stringify(profileData, null, 2));
+        const profileData: any = await x.getProfile("liam");
         setProfile(profileData);
       } catch (err) {
         console.error('Error fetching profile:', err);
