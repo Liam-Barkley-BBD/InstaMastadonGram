@@ -13,7 +13,6 @@ interface UserProfile {
     following: Following[];
     posts: Post[];
     publishedDate: string;
-    discoverable: boolean;
 }
 
 interface Follower {
@@ -37,8 +36,6 @@ interface Post {
     content: string;
     publishedDate: string;
     url: string;
-    replies?: number;
-    shares?: number;
     likes?: number;
 }
 
@@ -174,7 +171,6 @@ export class FedifyHandler {
             url: rawProfile.url,
             avatar: rawProfile.icon?.url,
             publishedDate: rawProfile.published,
-            discoverable: rawProfile.discoverable || false,
             followers: [],
             following: [],
             posts: [],
@@ -362,8 +358,7 @@ export class FedifyHandler {
                 content: this.stripHtml(postObject.object?.content || postObject.content || ""),
                 publishedDate: postObject.published || postObject.object?.published,
                 url: postObject.object?.url || postObject.url || postUrl,
-                replies: postObject.object?.replies?.totalItems || postObject.replies?.totalItems || 0,
-                shares: postObject.object?.shares?.totalItems || postObject.shares?.totalItems || 0,
+
                 likes: postObject.object?.likes?.totalItems || postObject.likes?.totalItems || 0
             };
         } catch (error) {
