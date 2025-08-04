@@ -39,6 +39,14 @@ interface Post {
     likes?: number;
 }
 
+interface PaginatedPostsResponse {
+    items: Post[];
+    totalItems: number;
+    hasNextPage: boolean;
+    nextPage?: number;
+    pagesLoaded: number;
+}
+
 export class FedifyHandler {
     API_BASE_URL = "https://mastodon.social"; // Set your Express API URL here
     fedify_headers = {
@@ -148,6 +156,7 @@ export class FedifyHandler {
         return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
     };
 
+    // Optimized getProfile - only fetches basic info + counts + first 20 posts
     getProfile = async (handle: string): Promise<UserProfile> => {
         const rawProfile = await this.makeRequest(`${this.EXPRESS_URL}/profile/${handle}`, {}, 0, false);
         
@@ -155,7 +164,7 @@ export class FedifyHandler {
             id: rawProfile.id,
             username: rawProfile.preferredUsername,
             displayName: rawProfile.name || rawProfile.preferredUsername,
-            bio: rawProfile.summary || "",
+            bio: this.stripHtml(rawProfile.summary || ""),
             url: rawProfile.url,
             avatar: rawProfile.icon?.url,
             publishedDate: rawProfile.published,
@@ -167,44 +176,113 @@ export class FedifyHandler {
             postsCount: 0
         };
 
-        // Fetch additional data in parallel through Express proxy
-        const [followersData, followingData, postsData] = await Promise.allSettled([
-            this.getFollowersProxy(handle),
-            this.getFollowingProxy(handle),
-            this.getPostsProxy(handle)
+        // Fetch counts and initial posts in parallel
+        const [countsData, postsData] = await Promise.allSettled([
+            this.getProfileCounts(handle),
+            this.getPostsPaginated(handle, 1, 20) // Start with page 1, 20 posts
         ]);
 
-        // Handle followers
-        if (followersData.status === 'fulfilled' && followersData.value) {
-            profileData.followers = followersData.value.items || [];
-            profileData.followersCount = followersData.value.totalItems || profileData?.followers?.length;
+        // Handle counts
+        if (countsData.status === 'fulfilled' && countsData.value) {
+            profileData.followersCount = countsData.value.followersCount || 0;
+            profileData.followingCount = countsData.value.followingCount || 0;
+            profileData.postsCount = countsData.value.postsCount || 0;
         }
 
-        // Handle following
-        if (followingData.status === 'fulfilled' && followingData.value) {
-            profileData.following = followingData.value.items || [];
-            profileData.followingCount = followingData.value.totalItems || profileData?.following?.length;
-        }
-
-        // Handle posts
+        // Handle initial posts
         if (postsData.status === 'fulfilled' && postsData.value) {
             profileData.posts = postsData.value.items || [];
-            profileData.postsCount = postsData.value.totalItems || profileData?.posts?.length;
         }
 
         return profileData as UserProfile;
     };
 
-    // Helper methods that use Express proxy to avoid CORS
-    private getFollowersProxy = async (handle: string, maxPages: number = 5): Promise<any> => {
+    // New method to get just the counts
+    private getProfileCounts = async (handle: string): Promise<{
+        followersCount: number;
+        followingCount: number;
+        postsCount: number;
+    }> => {
         try {
-            const followersResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/followers/${handle}?maxPages=${maxPages}`, 
+            const countsResponse = await this.makeRequest(
+                `${this.EXPRESS_URL}/profile/${handle}/counts`, 
                 {}, 0, false
             );
-            console.log('Raw followers response:', followersResponse);
             
-            // Check if orderedItems contains URLs (strings) or objects
+            return {
+                followersCount: countsResponse.followersCount || 0,
+                followingCount: countsResponse.followingCount || 0,
+                postsCount: countsResponse.postsCount || 0
+            };
+        } catch (error) {
+            console.warn('Failed to fetch profile counts:', error);
+            return { followersCount: 0, followingCount: 0, postsCount: 0 };
+        }
+    };
+
+    // New paginated posts method
+    getPostsPaginated = async (
+        handle: string, 
+        page: number = 1, 
+        limit: number = 20
+    ): Promise<PaginatedPostsResponse> => {
+        try {
+            const postsResponse = await this.makeRequest(
+                `${this.EXPRESS_URL}/posts/${handle}?page=${page}&limit=${limit}`, 
+                {}, 0, false
+            );
+            
+            const orderedItems = postsResponse.orderedItems || [];
+            let posts: Post[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    posts = await this.resolveMultiplePosts(orderedItems);
+                } else {
+                    // Already post objects
+                    posts = orderedItems.map((post: any) => ({
+                        id: post.id,
+                        content: this.stripHtml(post.object?.content || post.content || "") || post.object.attachment,
+                        publishedDate: post.published || post.object?.published,
+                        url: post.object?.url || post.url,
+                        replies: post.object?.replies?.totalItems || 0,
+                        shares: post.object?.shares?.totalItems || 0,
+                        likes: post.object?.likes?.totalItems || 0
+                    }));
+                }
+            }
+
+            return {
+                items: posts,
+                totalItems: postsResponse.totalItems || 0,
+                hasNextPage: posts.length === limit && (page * limit) < (postsResponse.totalItems || 0),
+                nextPage: posts.length === limit ? page + 1 : undefined,
+                pagesLoaded: page
+            };
+        } catch (error) {
+            console.warn('Failed to fetch paginated posts:', error);
+            return { 
+                items: [], 
+                totalItems: 0, 
+                hasNextPage: false, 
+                pagesLoaded: 0 
+            };
+        }
+    };
+
+    // Method to load followers when needed
+    getFollowersPaginated = async (handle: string, page: number = 1, limit: number = 50): Promise<{
+        items: Follower[];
+        totalItems: number;
+        hasNextPage: boolean;
+        nextPage?: number;
+    }> => {
+        try {
+            const followersResponse = await this.makeRequest(
+                `${this.EXPRESS_URL}/followers/${handle}?page=${page}&limit=${limit}`, 
+                {}, 0, false
+            );
+            
             const orderedItems = followersResponse.orderedItems || [];
             let followers: Follower[] = [];
             
@@ -212,7 +290,6 @@ export class FedifyHandler {
                 if (typeof orderedItems[0] === 'string') {
                     followers = await this.resolveMultipleUsers(orderedItems);
                 } else {
-                    // Already user objects
                     followers = orderedItems.map((follower: any) => ({
                         id: follower.id,
                         username: follower.preferredUsername || follower.name?.split('@')[0],
@@ -224,20 +301,27 @@ export class FedifyHandler {
             }
 
             return {
-                totalItems: followersResponse.totalItems || 0,
                 items: followers,
-                pagesLoaded: followersResponse.pagesLoaded || 0
+                totalItems: followersResponse.totalItems || 0,
+                hasNextPage: followers.length === limit && (page * limit) < (followersResponse.totalItems || 0),
+                nextPage: followers.length === limit ? page + 1 : undefined
             };
         } catch (error) {
-            console.warn('Failed to fetch followers:', error);
-            return { totalItems: 0, items: [], pagesLoaded: 0 };
+            console.warn('Failed to fetch paginated followers:', error);
+            return { items: [], totalItems: 0, hasNextPage: false };
         }
     };
 
-    private getFollowingProxy = async (handle: string, maxPages: number = 5): Promise<any> => {
+    // Method to load following when needed
+    getFollowingPaginated = async (handle: string, page: number = 1, limit: number = 50): Promise<{
+        items: Following[];
+        totalItems: number;
+        hasNextPage: boolean;
+        nextPage?: number;
+    }> => {
         try {
             const followingResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/following/${handle}?maxPages=${maxPages}`, 
+                `${this.EXPRESS_URL}/following/${handle}?page=${page}&limit=${limit}`, 
                 {}, 0, false
             );
             
@@ -259,52 +343,14 @@ export class FedifyHandler {
             }
 
             return {
-                totalItems: followingResponse.totalItems || 0,
                 items: following,
-                pagesLoaded: followingResponse.pagesLoaded || 0
+                totalItems: followingResponse.totalItems || 0,
+                hasNextPage: following.length === limit && (page * limit) < (followingResponse.totalItems || 0),
+                nextPage: following.length === limit ? page + 1 : undefined
             };
         } catch (error) {
-            console.warn('Failed to fetch following:', error);
-            return { totalItems: 0, items: [], pagesLoaded: 0 };
-        }
-    };
-
-    private getPostsProxy = async (handle: string, maxPages: number = 10): Promise<any> => {
-        try {
-            const postsResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/posts/${handle}?maxPages=${maxPages}`, 
-                {}, 0, false
-            );
-            console.log('Raw posts response:', postsResponse);
-            
-            const orderedItems = postsResponse.orderedItems || [];
-            let posts: Post[] = [];
-            
-            if (orderedItems.length > 0) {
-                if (typeof orderedItems[0] === 'string') {
-                    posts = await this.resolveMultiplePosts(orderedItems);
-                } else {
-                    // Already post objects
-                    posts = orderedItems.map((post: any) => ({
-                        id: post.id,
-                        content: this.stripHtml(post.object?.content || post.content ||"") || post.object.attachment ,
-                        publishedDate: post.published || post.object?.published,
-                        url: post.object?.url || post.url,
-                        replies: post.object?.replies?.totalItems || 0,
-                        shares: post.object?.shares?.totalItems || 0,
-                        likes: post.object?.likes?.totalItems || 0
-                    }));
-                }
-            }
-
-            return {
-                totalItems: postsResponse.totalItems || 0,
-                items: posts,
-                pagesLoaded: postsResponse.pagesLoaded || 0
-            };
-        } catch (error) {
-            console.warn('Failed to fetch posts:', error);
-            return { totalItems: 0, items: [], pagesLoaded: 0 };
+            console.warn('Failed to fetch paginated following:', error);
+            return { items: [], totalItems: 0, hasNextPage: false };
         }
     };
 
@@ -335,7 +381,6 @@ export class FedifyHandler {
                 content: this.stripHtml(postObject.object?.content || postObject.content || ""),
                 publishedDate: postObject.published || postObject.object?.published,
                 url: postObject.object?.url || postObject.url || postUrl,
-
                 likes: postObject.object?.likes?.totalItems || postObject.likes?.totalItems || 0
             };
         } catch (error) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import './ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 
@@ -46,16 +46,27 @@ interface UserProfile {
 
 const ProfilePage = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePosts, setHasMorePosts] = useState(false);
+  
+  const fedifyHandler = useRef(new FedifyHandler());
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  // Initial profile load
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const x = new FedifyHandler();
-        const profileData: any = await x.getProfile("liam");
+        const profileData: any = await fedifyHandler.current.getProfile("CatsOfYore");
         setProfile(profileData);
+        setPosts(profileData.posts || []);
+        setHasMorePosts(profileData.posts?.length === 20); // If we got 20 posts, there might be more
+        setCurrentPage(1);
       } catch (err) {
         console.error('Error fetching profile:', err);
         setError(err instanceof Error ? err.message : 'Failed to load profile');
@@ -65,7 +76,64 @@ const ProfilePage = () => {
     };
 
     fetchProfile();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
+
+  // Load more posts function
+  const loadMorePosts = useCallback(async () => {
+    if (!profile || loadingMorePosts || !hasMorePosts) return;
+
+    try {
+      setLoadingMorePosts(true);
+      const nextPage = currentPage + 1;
+      const morePostsData = await fedifyHandler.current.getPostsPaginated(
+        profile.username, 
+        nextPage, 
+        20
+      );
+
+      if (morePostsData.items && morePostsData.items.length > 0) {
+        setPosts(prevPosts => [...prevPosts, ...morePostsData.items]);
+        setCurrentPage(nextPage);
+        setHasMorePosts(morePostsData.hasNextPage);
+      } else {
+        setHasMorePosts(false);
+      }
+    } catch (err) {
+      console.error('Error loading more posts:', err);
+    } finally {
+      setLoadingMorePosts(false);
+    }
+  }, [profile, currentPage, loadingMorePosts, hasMorePosts]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!hasMorePosts || loadingMorePosts) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting) {
+          loadMorePosts();
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '100px'
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    observerRef.current = observer;
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMorePosts, loadingMorePosts, loadMorePosts]);
 
   const renderPostContent = (content: string | PostContent[]) => {
     if (typeof content === 'string') {
@@ -218,24 +286,46 @@ const ProfilePage = () => {
           </section>
 
           <section className="gallery">
-            {profile.posts && profile.posts.length > 0 ? (
-              <div className="gallery-grid">
-                {profile.posts.slice(0, 6).map((post, index) => (
-                  <article key={post.id || index} className="gallery-item">
-                    {renderPostContent(post.content)}
-                    <div className="post-meta">
-                      <span className="post-date">
-                        {new Date(post.publishedDate).toLocaleDateString()}
-                      </span>
-                      <div className="post-stats">
-                        <span>♥ {post.likes}</span>
-                        <span>↗ {post.shares}</span>
-                        <span>💬 {post.replies}</span>
+            {posts && posts.length > 0 ? (
+              <>
+                <div className="gallery-grid">
+                  {posts.map((post, index) => (
+                    <article key={post.id || index} className="gallery-item">
+                      {renderPostContent(post.content)}
+                      <div className="post-meta">
+                        <span className="post-date">
+                          {new Date(post.publishedDate).toLocaleDateString()}
+                        </span>
+                        <div className="post-stats">
+                          <span>♥ {post.likes}</span>
+
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                    </article>
+                  ))}
+                </div>
+                
+                {/* Intersection observer target for infinite scroll */}
+                {hasMorePosts && (
+                  <div ref={loadMoreRef} className="load-more-trigger">
+                    {loadingMorePosts && (
+                      <div className="loading-more">
+                        <div className="skeleton-grid">
+                          {Array.from({ length: 4 }, (_, index) => (
+                            <div key={index} className="skeleton skeleton-gallery-item"></div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {!hasMorePosts && posts.length > 0 && (
+                  <div className="end-of-posts">
+                    <p>You've reached the end!</p>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="no-posts">
                 <p>No posts yet</p>
