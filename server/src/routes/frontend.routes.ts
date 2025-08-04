@@ -71,7 +71,7 @@ router.get('/following/:handle', async (req, res) => {
 router.get('/posts/:handle', async (req, res) => {
     try {
         const { handle } = req.params;
-        const postsData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox`);
+        const postsData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox?page=true`);
         res.json(postsData);
     } catch (error) {
         console.error('Error fetching posts:', error);

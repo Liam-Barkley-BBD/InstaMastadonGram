@@ -84,6 +84,79 @@ export class FedifyHandler {
         }
     }
 
+    // Helper method to resolve a user URL to user object
+    private async resolveUserFromUrl(userUrl: string): Promise<Follower | Following | null> {
+        try {
+            // Make request with ActivityPub headers to get user object
+            const userObject = await this.makeRequest(userUrl, {}, 0, true);
+            
+            return {
+                id: userObject.id,
+                username: userObject.preferredUsername || this.extractUsernameFromUrl(userUrl),
+                displayName: userObject.name || userObject.preferredUsername || this.extractUsernameFromUrl(userUrl),
+                url: userObject.url || userUrl,
+                avatar: userObject.icon?.url
+            };
+        } catch (error) {
+            console.warn(`Failed to resolve user from URL ${userUrl}:`, error);
+            // Fallback to extracting what we can from the URL
+            const username = this.extractUsernameFromUrl(userUrl);
+            return {
+                id: userUrl,
+                username: username,
+                displayName: username,
+                url: userUrl,
+                avatar: undefined
+            };
+        }
+    }
+
+    // Helper method to extract username from ActivityPub URL
+    private extractUsernameFromUrl(url: string): string {
+        try {
+            // Handle common patterns like:
+            // https://mastodon.social/users/username
+            // https://instance.com/@username
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/').filter(part => part);
+            
+            if (pathParts.includes('users') && pathParts.length > 1) {
+                const userIndex = pathParts.indexOf('users');
+                return pathParts[userIndex + 1] || 'unknown';
+            }
+            
+            // Handle @username format
+            const lastPart = pathParts[pathParts.length - 1];
+            if (lastPart?.startsWith('@')) {
+                return lastPart.substring(1);
+            }
+            
+            return lastPart || 'unknown';
+        } catch (error) {
+            return 'unknown';
+        }
+    }
+
+    // Helper method to resolve multiple user URLs with concurrency control
+    private async resolveMultipleUsers(userUrls: string[], maxConcurrent: number = 5): Promise<(Follower | Following)[]> {
+        const results: (Follower | Following)[] = [];
+        
+        // Process URLs in batches to avoid overwhelming the server
+        for (let i = 0; i < userUrls.length; i += maxConcurrent) {
+            const batch = userUrls.slice(i, i + maxConcurrent);
+            const batchPromises = batch.map(url => this.resolveUserFromUrl(url));
+            const batchResults = await Promise.allSettled(batchPromises);
+            
+            batchResults.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    results.push(result.value);
+                }
+            });
+        }
+        
+        return results;
+    }
+
     getLoggedInUser = async () => {
         return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
     };
@@ -145,15 +218,28 @@ export class FedifyHandler {
                 `${this.EXPRESS_URL}/followers/${handle}?maxPages=${maxPages}`, 
                 {}, 0, false
             );
+            console.log('Raw followers response:', followersResponse);
             
-            // Parse followers into clean format
-            const followers = followersResponse.orderedItems?.map((follower: any) => ({
-                id: follower.id,
-                username: follower.preferredUsername || follower.name?.split('@')[0],
-                displayName: follower.name || follower.preferredUsername,
-                url: follower.url || follower.id,
-                avatar: follower.icon?.url
-            })) || [];
+            // Check if orderedItems contains URLs (strings) or objects
+            const orderedItems = followersResponse.orderedItems || [];
+            let followers: Follower[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    // URLs - need to resolve to user objects
+                    console.log('Resolving follower URLs to user objects...');
+                    followers = await this.resolveMultipleUsers(orderedItems);
+                } else {
+                    // Already user objects
+                    followers = orderedItems.map((follower: any) => ({
+                        id: follower.id,
+                        username: follower.preferredUsername || follower.name?.split('@')[0],
+                        displayName: follower.name || follower.preferredUsername,
+                        url: follower.url || follower.id,
+                        avatar: follower.icon?.url
+                    }));
+                }
+            }
 
             return {
                 totalItems: followersResponse.totalItems || 0,
@@ -173,14 +259,26 @@ export class FedifyHandler {
                 {}, 0, false
             );
             
-            // Parse following into clean format
-            const following = followingResponse.orderedItems?.map((person: any) => ({
-                id: person.id,
-                username: person.preferredUsername || person.name?.split('@')[0],
-                displayName: person.name || person.preferredUsername,
-                url: person.url || person.id,
-                avatar: person.icon?.url
-            })) || [];
+            // Check if orderedItems contains URLs (strings) or objects
+            const orderedItems = followingResponse.orderedItems || [];
+            let following: Following[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    // URLs - need to resolve to user objects
+                    console.log('Resolving following URLs to user objects...');
+                    following = await this.resolveMultipleUsers(orderedItems);
+                } else {
+                    // Already user objects
+                    following = orderedItems.map((person: any) => ({
+                        id: person.id,
+                        username: person.preferredUsername || person.name?.split('@')[0],
+                        displayName: person.name || person.preferredUsername,
+                        url: person.url || person.id,
+                        avatar: person.icon?.url
+                    }));
+                }
+            }
 
             return {
                 totalItems: followingResponse.totalItems || 0,
@@ -199,17 +297,29 @@ export class FedifyHandler {
                 `${this.EXPRESS_URL}/posts/${handle}?maxPages=${maxPages}`, 
                 {}, 0, false
             );
+            console.log('Raw posts response:', postsResponse);
             
-            // Parse posts into clean format
-            const posts = postsResponse.orderedItems?.map((post: any) => ({
-                id: post.id,
-                content: this.stripHtml(post.object?.content || post.content || ""),
-                publishedDate: post.published || post.object?.published,
-                url: post.object?.url || post.url,
-                replies: post.object?.replies?.totalItems || 0,
-                shares: post.object?.shares?.totalItems || 0,
-                likes: post.object?.likes?.totalItems || 0
-            })) || [];
+            // Check if orderedItems contains URLs (strings) or objects
+            const orderedItems = postsResponse.orderedItems || [];
+            let posts: Post[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    // URLs - need to resolve to post objects
+                    posts = await this.resolveMultiplePosts(orderedItems);
+                } else {
+                    // Already post objects
+                    posts = orderedItems.map((post: any) => ({
+                        id: post.id,
+                        content: this.stripHtml(post.object?.content || post.content ||"") || post.object.attachment ,
+                        publishedDate: post.published || post.object?.published,
+                        url: post.object?.url || post.url,
+                        replies: post.object?.replies?.totalItems || 0,
+                        shares: post.object?.shares?.totalItems || 0,
+                        likes: post.object?.likes?.totalItems || 0
+                    }));
+                }
+            }
 
             return {
                 totalItems: postsResponse.totalItems || 0,
@@ -222,7 +332,46 @@ export class FedifyHandler {
         }
     };
 
-    // Helper method to strip HTML from content
+    // Helper method to resolve post URLs to post objects
+    private async resolveMultiplePosts(postUrls: string[], maxConcurrent: number = 5): Promise<Post[]> {
+        const results: Post[] = [];
+        
+        // Process URLs in batches to avoid overwhelming the server
+        for (let i = 0; i < postUrls.length; i += maxConcurrent) {
+            const batch = postUrls.slice(i, i + maxConcurrent);
+            const batchPromises = batch.map(url => this.resolvePostFromUrl(url));
+            const batchResults = await Promise.allSettled(batchPromises);
+            
+            batchResults.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    results.push(result.value);
+                }
+            });
+        }
+        
+        return results;
+    }
+
+    // Helper method to resolve a post URL to post object
+    private async resolvePostFromUrl(postUrl: string): Promise<Post | null> {
+        try {
+            const postObject = await this.makeRequest(postUrl, {}, 0, true);
+            
+            return {
+                id: postObject.id,
+                content: this.stripHtml(postObject.object?.content || postObject.content || ""),
+                publishedDate: postObject.published || postObject.object?.published,
+                url: postObject.object?.url || postObject.url || postUrl,
+                replies: postObject.object?.replies?.totalItems || postObject.replies?.totalItems || 0,
+                shares: postObject.object?.shares?.totalItems || postObject.shares?.totalItems || 0,
+                likes: postObject.object?.likes?.totalItems || postObject.likes?.totalItems || 0
+            };
+        } catch (error) {
+            console.warn(`Failed to resolve post from URL ${postUrl}:`, error);
+            return null;
+        }
+    }
+
     private stripHtml = (html: string): string => {
         if (typeof document !== 'undefined') {
             const tmp = document.createElement('div');
