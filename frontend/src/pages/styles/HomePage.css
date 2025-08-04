@@ -130,28 +130,6 @@
   margin-bottom: 1rem;
 }
 
-.beegram-logo,
-.beegram-nav,
-.beegram-nav-btn,
-.beegram-profile,
-.beegram-profile-card,
-.beegram-avatar,
-.beegram-username,
-.beegram-handle,
-.beegram-post-user,
-.beegram-post-avatar,
-.beegram-follow-btn,
-.beegram-post-image,
-.beegram-post-actions,
-.beegram-action-btn,
-.beegram-post-stats,
-.beegram-likes,
-.beegram-post-description,
-.beegram-timestamp,
-.beegram-comments-link,
-.beegram-discover-btn {
-}
-
 @media (min-width: 769px) {
   .beegram-container {
     flex-direction: row;
