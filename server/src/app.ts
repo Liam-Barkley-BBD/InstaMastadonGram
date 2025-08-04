@@ -27,7 +27,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI!,
+    mongoUrl: process.env.MONGO_URI || "mongodb://127.0.0.1:27017/instaMastadonGram",
     touchAfter: 24 * 3600,
     ttl: 14 * 24 * 60 * 60
   })
