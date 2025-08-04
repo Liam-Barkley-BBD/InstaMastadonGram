@@ -17,7 +17,7 @@ npm run dev/prod
 ## Postman: Test Login
 
 ```
-http://localhost:8000/auth/google
+http://localhost:8000/api/auth/google
 ```
 
 ## Postman: Test Fedify Endpoint
