@@ -28,8 +28,7 @@ federation
     else console.log("Found user!")
 
     const keys = await ctx.getActorKeyPairs(identifier);
-    console.log(keys);
-    console.log(actor)
+    
     return new Person({
       id: ctx.getActorUri(identifier),
       preferredUsername: identifier,

@@ -7,7 +7,6 @@ import './Uploadpage.css';
 const UploadMediaPage = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [caption, setCaption] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [location, setLocation] = useState('');
   const [taggedUsers, setTaggedUsers] = useState([]);
   const fileInputRef = useRef(null);
@@ -40,7 +39,6 @@ const UploadMediaPage = () => {
     setCaption('');
     setLocation('');
     setTaggedUsers([]);
-    setShowAdvanced(false);
   };
 
   return (

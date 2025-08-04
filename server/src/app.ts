@@ -9,7 +9,8 @@ import "./config/passport";
 import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
 import userRoutes from "./routes/users.routes.ts";
-import followRoutes from "./routes/follow.routes.ts"
+import cors from "cors";
+import frontEndRoutes from "./routes/frontend.routes.ts";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.set("trust proxy", true);
 app.use(integrateFederation(federation, (req) => undefined));
 
 app.use(express.json());
+app.use(cors())
 app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
@@ -32,13 +34,12 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(express.urlencoded({ extended: true }));
 
-app.use("/auth", authRoutes);
-app.use("/users", userRoutes);
-app.use("/", followRoutes);
-app.use("/posts", postRoutes);
-
-app.use(integrateFederation(federation, (req) => undefined));
+app.use("/api/auth", authRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/frontend", frontEndRoutes)
 
 app.get("/", (req, res) => {
   res.send("Hello, Fedify + Google Auth!");
