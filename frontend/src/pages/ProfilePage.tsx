@@ -1,15 +1,120 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import './ProfilePage.css';
+import { FedifyHandler } from '../fedify/fedify';
+
+interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  bio: string;
+  url: string;
+  publishedDate: string;
+  discoverable: boolean;
+  followers: any[];
+  following: any[];
+  posts: any[];
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+}
 
 const ProfilePage = () => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const x = new FedifyHandler();
+        const profileData = await x.getProfile("liambarkley");
+        console.log(JSON.stringify(profileData, null, 2));
+        setProfile(profileData);
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []); // Empty dependency array means this runs once on mount
+
+  if (loading) {
+    return (
+      <div className="main-content-inner profile-container">
+        <main className="profile-page">
+          <header className="profile-header">
+            <button className="back-button">‹</button>
+            <div className="skeleton skeleton-text skeleton-username"></div>
+            <button className="menu-button">⋯</button>
+          </header>
+
+          <article className="profile-content">
+            <section className="profile-info">
+              <figure className="profile-avatar">
+                <div className="skeleton skeleton-avatar"></div>
+              </figure>
+                       
+              <div className="profile-details">
+                <div className="skeleton skeleton-text skeleton-display-name"></div>
+                <div className="skeleton skeleton-text skeleton-handle"></div>
+                               
+                <div className="stats">
+                  <div className="stat">
+                    <div className="skeleton skeleton-text skeleton-stat-number"></div>
+                    <span>Posts</span>
+                  </div>
+                  <div className="stat">
+                    <div className="skeleton skeleton-text skeleton-stat-number"></div>
+                    <span>Followers</span>
+                  </div>
+                  <div className="stat">
+                    <div className="skeleton skeleton-text skeleton-stat-number"></div>
+                    <span>Following</span>
+                  </div>
+                </div>
+                               
+                <div className="bio">
+                  <div className="skeleton skeleton-text skeleton-bio-line"></div>
+                  <div className="skeleton skeleton-text skeleton-bio-line skeleton-bio-short"></div>
+                </div>
+                               
+                <div className="actions">
+                  <div className="skeleton skeleton-button"></div>
+                </div>
+              </div>
+            </section>
+
+            <section className="gallery">
+              <div className="gallery-grid">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div key={index} className="skeleton skeleton-gallery-item"></div>
+                ))}
+              </div>
+            </section>
+          </article>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div>Error loading profile: {error}</div>;
+  }
+
+  if (!profile) {
+    return <div>No profile data available</div>;
+  }
+
   return (
     <div className="main-content-inner profile-container">
-
-    
-    <main className="profile-page">
+      <main className="profile-page">
         <header className="profile-header">
           <button className="back-button">‹</button>
-          <h2>darlene_beats</h2>
+          <h2>{profile.username}</h2>
           <button className="menu-button">⋯</button>
         </header>
 
@@ -18,31 +123,34 @@ const ProfilePage = () => {
             <figure className="profile-avatar">
               <span className="avatar-large"></span>
             </figure>
-            
+                     
             <div className="profile-details">
-              <h1>Darlene Beats</h1>
-              <p className="username">@darlene_beats</p>
-              
+              <h1>{profile.displayName || profile.username}</h1>
+              <p className="username">@{profile.username}</p>
+                             
               <div className="stats">
                 <div className="stat">
-                  <strong>360</strong>
+                  <strong>{profile.postsCount}</strong>
                   <span>Posts</span>
                 </div>
                 <div className="stat">
-                  <strong>160k</strong>
+                  <strong>{profile.followersCount}</strong>
                   <span>Followers</span>
                 </div>
                 <div className="stat">
-                  <strong>140k</strong>
+                  <strong>{profile.followingCount}</strong>
                   <span>Following</span>
                 </div>
               </div>
-              
+                             
               <div className="bio">
-                <p>Digital creator & photographer</p>
-                <p>Living life one adventure at a time</p>
+                {profile.bio ? (
+                  <p>{profile.bio}</p>
+                ) : (
+                  <p>No bio available</p>
+                )}
               </div>
-              
+                             
               <div className="actions">
                 <button className="follow-button">Follow</button>
               </div>
@@ -50,17 +158,22 @@ const ProfilePage = () => {
           </section>
 
           <section className="gallery">
-            <div className="gallery-grid">
-              <article className="gallery-item"></article>
-              <article className="gallery-item"></article>
-              <article className="gallery-item"></article>
-              <article className="gallery-item"></article>
-              <article className="gallery-item"></article>
-              <article className="gallery-item"></article>
-            </div>
+            {profile.posts && profile.posts.length > 0 ? (
+              <div className="gallery-grid">
+                {profile.posts.slice(0, 6).map((_, index) => (
+                  <article key={index} className="gallery-item">
+                    {/* You can add post content here based on your post structure */}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="no-posts">
+                <p>No posts yet</p>
+              </div>
+            )}
           </section>
         </article>
-    </main>
+      </main>
     </div>
   );
 };

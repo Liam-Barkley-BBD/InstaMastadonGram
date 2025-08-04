@@ -9,6 +9,8 @@ import "./config/passport";
 import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
 import userRoutes from "./routes/users.routes.ts"
+import frontendRouter from "./routes/frontend.routes.ts";
+import cors from "cors";
 
 dotenv.config();
 
@@ -19,12 +21,13 @@ app.set("trust proxy", true);
 app.use(integrateFederation(federation, (req) => undefined));
 
 app.use(express.json());
+app.use(cors())
 app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI!,
+    mongoUrl: process.env.MONGO_URI || "mongodb://127.0.0.1:27017/instaMastadonGram",
     touchAfter: 24 * 3600,
     ttl: 14 * 24 * 60 * 60
   })
@@ -34,6 +37,7 @@ app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes)
+app.use("/api/frontend", frontendRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello, Fedify + Google Auth!");
