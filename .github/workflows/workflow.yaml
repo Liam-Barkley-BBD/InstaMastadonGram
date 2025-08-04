@@ -151,8 +151,9 @@ jobs:
           scp -o StrictHostKeyChecking=no -i privatekey.pem ./api-build.zip "ubuntu@$EC2_HOST:api-build.zip"
           
           ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-            unzip -o api-build.zip &&
+            npm install -g pm2
 
+            unzip -o api-build.zip &&
             cd api-build/ &&
 
             npm install &&
