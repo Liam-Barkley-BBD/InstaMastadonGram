@@ -261,7 +261,7 @@ jobs:
           sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
           server {
           listen 80;
-          server_name bbd-grad-project.co.za www.bbd-grad-project.co.za;
+          server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
 
           location /.well-known/acme-challenge/ {
               root /var/www/html;
@@ -307,5 +307,5 @@ jobs:
         EC2_HOST=${{ needs.terraform.outputs.ec2host }}
         ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
           sudo apt install certbot python3-certbot-nginx -y &&
-          sudo certbot --nginx -d bbd-grad-project.co.za -d www.bbd-grad-project.co.za --non-interactive --agree-tos --email liam.barkley@bbd.co.za
+          sudo certbot --nginx -d bbd-grad-program-2025.online -d www.bbd-grad-program-2025.online --non-interactive --agree-tos --email liam.barkley@bbd.co.za
         '
