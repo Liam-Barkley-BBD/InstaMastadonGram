@@ -9,6 +9,11 @@ on:
       - main
       - dev
 
+  pull_request:
+    branches: 
+      - dev
+      - main
+
 jobs:
   terraform:
     permissions:
@@ -221,6 +226,104 @@ jobs:
             systemctl status redis-server
             systemctl status mongod
             EOF
+
+  build-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install required dependencies
+        run: npm install --force
+        working-directory: frontend
+      
+      - name: Build application
+        run: npm run build
+        working-directory: frontend
+
+      - name: Package application
+        working-directory: frontend
+        run: |
+          mkdir -p frontend-build
+          cp -r dist frontend-build/
+          cp package.json frontend-build/
+          zip -r frontend-build.zip frontend-build
+          
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/frontend-build.zip
+
+  deploy-frontend:
+    name: Deploy frontend to EC2
+    permissions:
+      id-token: write
+      contents: read
+    needs: 
+      - build-frontend
+      - terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Key Store
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+              EC2_PRIVATE_KEY, privatekey
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+
+      - name: Setup private key
+        run: |
+          echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
+          chmod 0500 privatekey.pem
+
+      - name: Deploy
+        run: |
+          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+          scp -o StrictHostKeyChecking=no -i privatekey.pem ./frontend-build.zip "ubuntu@$EC2_HOST:frontend-build.zip"
+          
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+            unzip -o frontend-build.zip && cd frontend-build && npm install --force
+          '
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
+          cat <<EOF > frontend-build/start-server.sh
+          #!/bin/bash
+          npm run preview
+          EOF'
+
+      - name: Make script executable
+        run: |
+          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
+            chmod +x frontend-build/start-server.sh
+          '
+
+      - name: Run with pm2
+        run: |
+          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
+            cd frontend-build/ && 
+            # Stop and delete existing pm2 process if it exists
+            if pm2 list | grep -q "frontend"; then
+              pm2 delete frontend;
+            fi && 
+            pm2 start ./start-server.sh --name frontend
+          '
+
 
   # issue-certificates:
   #   needs:
