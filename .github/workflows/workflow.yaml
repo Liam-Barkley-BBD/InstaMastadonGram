@@ -9,11 +9,6 @@ on:
       - main
       - dev
 
-  pull_request:
-    branches: 
-      - dev
-      - main
-
 jobs:
   terraform:
     permissions:
