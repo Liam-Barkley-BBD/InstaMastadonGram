@@ -81,10 +81,8 @@ export class FedifyHandler {
         }
     }
 
-    // Helper method to resolve a user URL to user object
     private async resolveUserFromUrl(userUrl: string): Promise<Follower | Following | null> {
         try {
-            // Make request with ActivityPub headers to get user object
             const userObject = await this.makeRequest(userUrl, {}, 0, true);
             
             return {
@@ -96,7 +94,6 @@ export class FedifyHandler {
             };
         } catch (error) {
             console.warn(`Failed to resolve user from URL ${userUrl}:`, error);
-            // Fallback to extracting what we can from the URL
             const username = this.extractUsernameFromUrl(userUrl);
             return {
                 id: userUrl,
@@ -108,12 +105,8 @@ export class FedifyHandler {
         }
     }
 
-    // Helper method to extract username from ActivityPub URL
     private extractUsernameFromUrl(url: string): string {
         try {
-            // Handle common patterns like:
-            // https://mastodon.social/users/username
-            // https://instance.com/@username
             const urlObj = new URL(url);
             const pathParts = urlObj.pathname.split('/').filter(part => part);
             
@@ -121,7 +114,6 @@ export class FedifyHandler {
                 const userIndex = pathParts.indexOf('users');
                 return pathParts[userIndex + 1] || 'unknown';
             }
-            
             // Handle @username format
             const lastPart = pathParts[pathParts.length - 1];
             if (lastPart?.startsWith('@')) {
@@ -134,11 +126,9 @@ export class FedifyHandler {
         }
     }
 
-    // Helper method to resolve multiple user URLs with concurrency control
     private async resolveMultipleUsers(userUrls: string[], maxConcurrent: number = 5): Promise<(Follower | Following)[]> {
         const results: (Follower | Following)[] = [];
         
-        // Process URLs in batches to avoid overwhelming the server
         for (let i = 0; i < userUrls.length; i += maxConcurrent) {
             const batch = userUrls.slice(i, i + maxConcurrent);
             const batchPromises = batch.map(url => this.resolveUserFromUrl(url));
@@ -159,10 +149,8 @@ export class FedifyHandler {
     };
 
     getProfile = async (handle: string): Promise<UserProfile> => {
-        // Get the main profile data through Express proxy
         const rawProfile = await this.makeRequest(`${this.EXPRESS_URL}/profile/${handle}`, {}, 0, false);
         
-        // Parse the basic profile info
         const profileData: Partial<UserProfile> = {
             id: rawProfile.id,
             username: rawProfile.preferredUsername,
@@ -222,8 +210,6 @@ export class FedifyHandler {
             
             if (orderedItems.length > 0) {
                 if (typeof orderedItems[0] === 'string') {
-                    // URLs - need to resolve to user objects
-                    console.log('Resolving follower URLs to user objects...');
                     followers = await this.resolveMultipleUsers(orderedItems);
                 } else {
                     // Already user objects
@@ -255,17 +241,13 @@ export class FedifyHandler {
                 {}, 0, false
             );
             
-            // Check if orderedItems contains URLs (strings) or objects
             const orderedItems = followingResponse.orderedItems || [];
             let following: Following[] = [];
             
             if (orderedItems.length > 0) {
                 if (typeof orderedItems[0] === 'string') {
-                    // URLs - need to resolve to user objects
-                    console.log('Resolving following URLs to user objects...');
                     following = await this.resolveMultipleUsers(orderedItems);
                 } else {
-                    // Already user objects
                     following = orderedItems.map((person: any) => ({
                         id: person.id,
                         username: person.preferredUsername || person.name?.split('@')[0],
@@ -287,7 +269,7 @@ export class FedifyHandler {
         }
     };
 
-    private getPostsProxy = async (handle: string, maxPages: number = 3): Promise<any> => {
+    private getPostsProxy = async (handle: string, maxPages: number = 10): Promise<any> => {
         try {
             const postsResponse = await this.makeRequest(
                 `${this.EXPRESS_URL}/posts/${handle}?maxPages=${maxPages}`, 
@@ -295,13 +277,11 @@ export class FedifyHandler {
             );
             console.log('Raw posts response:', postsResponse);
             
-            // Check if orderedItems contains URLs (strings) or objects
             const orderedItems = postsResponse.orderedItems || [];
             let posts: Post[] = [];
             
             if (orderedItems.length > 0) {
                 if (typeof orderedItems[0] === 'string') {
-                    // URLs - need to resolve to post objects
                     posts = await this.resolveMultiplePosts(orderedItems);
                 } else {
                     // Already post objects
@@ -328,11 +308,9 @@ export class FedifyHandler {
         }
     };
 
-    // Helper method to resolve post URLs to post objects
     private async resolveMultiplePosts(postUrls: string[], maxConcurrent: number = 5): Promise<Post[]> {
         const results: Post[] = [];
         
-        // Process URLs in batches to avoid overwhelming the server
         for (let i = 0; i < postUrls.length; i += maxConcurrent) {
             const batch = postUrls.slice(i, i + maxConcurrent);
             const batchPromises = batch.map(url => this.resolvePostFromUrl(url));
@@ -348,7 +326,6 @@ export class FedifyHandler {
         return results;
     }
 
-    // Helper method to resolve a post URL to post object
     private async resolvePostFromUrl(postUrl: string): Promise<Post | null> {
         try {
             const postObject = await this.makeRequest(postUrl, {}, 0, true);
