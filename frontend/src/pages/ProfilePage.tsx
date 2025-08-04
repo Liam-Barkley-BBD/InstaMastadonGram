@@ -31,6 +31,7 @@ interface Post {
 
 interface UserProfile {
   id: string;
+  avatar?: string;
   username: string;
   displayName: string;
   bio: string;
@@ -63,6 +64,7 @@ const ProfilePage = () => {
       try {
         setLoading(true);
         const profileData: any = await fedifyHandler.current.getProfile("CatsOfYore");
+        console.log('Fetched profile data:', profileData);
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20); // If we got 20 posts, there might be more
@@ -249,8 +251,12 @@ const ProfilePage = () => {
         <article className="profile-content">
           <section className="profile-info">
             <figure className="profile-avatar">
-              <span className="avatar-large"></span>
-            </figure>
+          {profile.avatar? (
+            <img src={profile.avatar} alt="Profile Avatar" className="avatar-large" />
+          ) : (
+            <span className="avatar-large" />
+          )}
+        </figure>
                      
             <div className="profile-details">
               <h1>{profile.displayName || profile.username}</h1>
