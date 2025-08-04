@@ -1,88 +1,66 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, UserPlus, UserCheck, MapPin, Users2, Verified } from 'lucide-react';
-import type { UserProfile } from '../types';
-
 import './SearchUsers.css';
 
-
-const mockUsers = [
-  {
-    id: 1,
-    username: 'alexadventures',
-    displayName: 'Alexandra Smith',
-    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b15c2177?w=150&h=150&fit=crop&crop=face',
-    verified: true,
-    followers: '12.5K',
-    following: '892',
-    posts: '234',
-    bio: 'Adventure photographer • World traveler ✈️',
-    location: 'San Francisco, CA',
-    mutualFriends: 5,
-    isOnline: true
-  },
-  {
-    id: 2,
-    username: 'foodie_marcus',
-    displayName: 'Marcus Chen',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    verified: false,
-    followers: '8.2K',
-    following: '1.2K',
-    posts: '456',
-    bio: 'Chef & Food Blogger 🍜 Sharing culinary adventures',
-    location: 'New York, NY',
-    mutualFriends: 12,
-    isOnline: false
-  },
-  {
-    id: 3,
-    username: 'nature_sarah',
-    displayName: 'Sarah Johnson',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-    verified: false,
-    followers: '5.8K',
-    following: '543',
-    posts: '189',
-    bio: 'Nature lover 🌿 Wildlife photographer',
-    location: 'Portland, OR',
-    mutualFriends: 3,
-    isOnline: true
-  },
-  {
-    id: 4,
-    username: 'techguru_dev',
-    displayName: 'David Park',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-    verified: true,
-    followers: '15.3K',
-    following: '234',
-    posts: '567',
-    bio: 'Software Engineer • Tech Enthusiast 💻',
-    location: 'Seattle, WA',
-    mutualFriends: 8,
-    isOnline: false
-  },
-  {
-    id: 5,
-    username: 'artist_emma',
-    displayName: 'Emma Wilson',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
-    verified: false,
-    followers: '3.4K',
-    following: '678',
-    posts: '123',
-    bio: 'Digital Artist 🎨 Creating magic pixel by pixel',
-    location: 'Los Angeles, CA',
-    mutualFriends: 2,
-    isOnline: true
-  }
-];
-
 const SearchUsersPage = () => {
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const [followingUsers, setFollowingUsers] = useState(new Set());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Mock user data
+  const mockUsers = [
+    {
+      id: 1,
+      username: 'alexadventures',
+      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b15c2177?w=150&h=150&fit=crop&crop=face',
+      followers: '12.5K',
+      following: '892',
+      posts: '234',
+      bio: 'Adventure photographer • World traveler ✈️',
+    },
+    {
+      id: 2,
+      username: 'foodie_marcus',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+      followers: '8.2K',
+      following: '1.2K',
+      posts: '456',
+      bio: 'Chef & Food Blogger 🍜 Sharing culinary adventures',
+    },
+    {
+      id: 3,
+      username: 'nature_sarah',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+      followers: '5.8K',
+      following: '543',
+      posts: '189',
+      bio: 'Nature lover 🌿 Wildlife photographer',
+
+    },
+    {
+      id: 4,
+      username: 'techguru_dev',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+      verified: true,
+      followers: '15.3K',
+      following: '234',
+      posts: '567',
+      bio: 'Software Engineer • Tech Enthusiast 💻',
+      location: 'Seattle, WA',
+      mutualFriends: 8,
+      isOnline: false
+    },
+    {
+      id: 5,
+      username: 'artist_emma',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face',
+      followers: '3.4K',
+      following: '678',
+      posts: '123',
+      bio: 'Digital Artist 🎨 Creating magic pixel by pixel',
+    }
+  ];
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -90,8 +68,7 @@ const SearchUsersPage = () => {
       // Simulate API call delay
       const timer = setTimeout(() => {
         const filtered = mockUsers.filter(user => 
-          user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
+          user.username.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setSearchResults(filtered);
         setIsLoading(false);
@@ -102,7 +79,7 @@ const SearchUsersPage = () => {
     }
   }, [searchQuery]);
 
-  const handleFollow = (userId: number) => {
+  const handleFollow = (userId) => {
     setFollowingUsers(prev => {
       const newSet = new Set(prev);
       if (newSet.has(userId)) {
@@ -114,7 +91,8 @@ const SearchUsersPage = () => {
     });
   };
 
-  const UserCard = ({ user, isCompact = false }: { user: UserProfile; isCompact?: boolean }) => (
+
+  const UserCard = ({ user, isCompact = false }) => (
     <div className="card">
       <div className="user-card-content">
         <div className="user-info-section">

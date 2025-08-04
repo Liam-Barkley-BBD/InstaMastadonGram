@@ -1,35 +1,87 @@
 terraform {
-  required_version = ">= 1.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    region = "af-south-1"
+  }
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = "af-south-1"
 }
 
-data "aws_ami" "ubuntu" {
-  most_recent = true
+resource "aws_default_vpc" "default_vpc" {
+  tags = {
+    Name = "default_vpc"
+  }
+}
 
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+data "aws_availability_zones" "available_zones" {}
+
+resource "aws_default_subnet" "subnet_az1" {
+  availability_zone = data.aws_availability_zones.available_zones.names[0]
+}
+
+resource "aws_default_subnet" "subnet_az2" {
+  availability_zone = data.aws_availability_zones.available_zones.names[1]
+}
+
+resource "aws_security_group" "ec2_security_group" {
+  name_prefix = "instamastadongram_api_sg"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  owners = ["099720109477"]
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-resource "aws_budgets_budget" "imgb_budget" {
-  name              = "${var.project_name}_budget"
+resource "aws_instance" "instamastadongram_ec2_instance" {
+  ami           = "ami-0b7e05c6022fc830b"
+  instance_type = "t3.small"
+  key_name      = "instamastadongram-key"
+
+  tags = {
+    Name = "instamastadongram_ec2_instance"
+  }
+
+  vpc_security_group_ids = [aws_security_group.ec2_security_group.id]
+}
+
+resource "aws_budgets_budget" "team_11_budget" {
+  name              = "team_11_budget"
   budget_type       = "COST"
-  limit_amount      = "25"
+  limit_amount      = "50"
   limit_unit        = "USD"
-  time_period_start   = "2025-08-03_00:00"
-  time_period_end = "2025-08-08_00:00"
+  time_period_start = "2025-07-28_00:00"
+  time_period_end   = "2025-08-20_00:00"
   time_unit         = "MONTHLY"
 
   notification {
@@ -111,4 +163,14 @@ resource "aws_budgets_budget" "imgb_budget" {
     notification_type          = "ACTUAL"
     subscriber_email_addresses = var.budget_notification_emails
   }
+}
+
+resource "aws_eip" "instamastadongram_ec2_eip" {
+  instance = aws_instance.instamastadongram_ec2_instance.id
+  domain   = "vpc"
+}
+
+output "ec2_host" {
+  value       = aws_eip.instamastadongram_ec2_eip.public_dns
+  description = "The endpoint of the EC2 instance"
 }

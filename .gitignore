@@ -152,3 +152,5 @@ node_modules
 .npmrc
 coverage
 .nyc_output
+
+*.terraform*

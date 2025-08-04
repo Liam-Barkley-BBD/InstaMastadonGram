@@ -1,0 +1,311 @@
+name: "Deployment"
+env:
+  AWS_REGION: af-south-1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  terraform:
+    permissions:
+      id-token: write
+      contents: read
+    name: "Manage AWS Resources"
+    runs-on: ubuntu-latest
+    outputs:
+      ec2host: ${{ steps.tf_outputs.outputs.ec2host }}
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure S3 bucket exists for backend
+        run: |
+          BUCKET_NAME="instamastadongram-tf-state"
+          REGION="${{ env.AWS_REGION }}"
+
+          if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
+            echo "Bucket does not exist. Creating..."
+            aws s3api create-bucket --bucket "$BUCKET_NAME" --region "$REGION" \
+              --create-bucket-configuration LocationConstraint="$REGION"
+          else
+            echo "Bucket already exists."
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.0.1
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        id: init
+        run: terraform init -backend-config="bucket=instamastadongram-tf-state" -backend-config="key=tf-state.tf" -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: Capture Terraform Outputs
+        id: tf_outputs
+        run: |
+          echo "ec2host=$(terraform output -raw ec2_host)" >> $GITHUB_OUTPUT
+
+  build-api:
+    name: Build API
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install required dependencies
+        run: npm install
+        working-directory: server
+
+      - name: Package application
+        working-directory: server
+        run: |
+            mkdir -p api-build
+            cp -r src api-build/
+            cp package.json api-build/
+            cp package-lock.json api-build/ || true
+            cp .env.example api-build/ || true
+            zip -r api-build.zip api-build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-build
+          path: server/api-build.zip
+
+  deploy-api:
+    name: Deploy API to EC2
+    permissions:
+      id-token: write
+      contents: read
+    needs: 
+      - build-api
+      - terraform
+      - setup-databases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Key Store
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            EC2_PRIVATE_KEY, privatekey
+            GOOGLE_CLIENT_ID, googleclientid
+            GOOGLE_CLIENT_SECRET, googleclientsecret
+            GOOGLE_CALLBACK_URL, googlecallbackurl
+            SESSION_SECRET, sessionsecret
+            DOMAIN, domainurl
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-build
+
+      - name: Setup private key
+        run: |
+          echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
+          chmod 0500 privatekey.pem
+
+      - name: Set env variables
+        run: |
+              EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+              ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
+              sudo tee /etc/environment > /dev/null <<'ENV_VAR'
+              GOOGLE_CLIENT_ID=${{ env.GOOGLE_CLIENT_ID }}
+              GOOGLE_CLIENT_SECRET=${{ env.GOOGLE_CLIENT_SECRET }}
+              GOOGLE_CALLBACK_URL=${{ env.GOOGLE_CALLBACK_URL }}
+              SESSION_SECRET=${{ env.SESSION_SECRET }}
+              DOMAIN=${{ env.DOMAIN }}
+              ENV_VAR
+              EOF
+      
+      - name: Deploy
+        run: |
+          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+          scp -o StrictHostKeyChecking=no -i privatekey.pem ./api-build.zip "ubuntu@$EC2_HOST:api-build.zip"
+          
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+          sudo apt-get update &&
+          sudo apt-get install -y unzip curl &&
+
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - &&
+          sudo apt-get install -y nodejs &&
+
+          sudo npm install -g pm2 &&
+
+          unzip -o api-build.zip &&
+
+          cd api-build/ &&
+
+          npm install &&
+          
+          # Stop and delete existing pm2 process if it exists
+          if pm2 list | grep -q "instamastadongram-api"; then
+            pm2 delete instamastadongram-api;
+          fi &&
+          
+          pm2 start npm --name instamastadongram-api -- run prod
+          '
+  setup-databases:
+      name: Setup MongoDB and Redis
+      permissions:
+        id-token: write
+        contents: read
+      needs:
+        - terraform
+      runs-on: ubuntu-latest
+      steps:
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v2
+          with:
+            role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+            aws-region: ${{ env.AWS_REGION }}
+
+        - name: Get secrets from AWS Key Store
+          uses: aws-actions/aws-secretsmanager-get-secrets@v2
+          with:
+            secret-ids: |
+              EC2_PRIVATE_KEY, privatekey
+
+        - name: Setup private key
+          run: |
+            echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
+            chmod 0500 privatekey.pem
+
+        - name: Install MongoDB and Redis on EC2
+          run: |
+            EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+
+            ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" 'bash -s' <<'EOF'
+            # Install Redis
+            sudo apt install redis-server -y
+            sudo systemctl enable redis-server
+            sudo systemctl start redis-server
+
+            # Install MongoDB
+            sudo apt-get install -y gnupg curl
+            curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
+            sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg \
+            --dearmor
+            echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+            sudo apt-get update
+            sudo apt install -y mongodb-org
+            sudo systemctl enable mongod
+            sudo systemctl start mongod
+
+            # Confirm both services are running
+            systemctl status redis-server
+            systemctl status mongod
+            EOF
+
+  # issue-certificates:
+  #   needs:
+  #   - deploy-api
+  #   - terraform
+  #   permissions:
+  #       id-token: write
+  #       contents: read
+  #   name: Issue Certificates
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Configure AWS credentials
+  #     uses: aws-actions/configure-aws-credentials@v2
+  #     with:
+  #       role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+  #       aws-region: ${{ env.AWS_REGION }}
+
+  #   - name: Get secrets from AWS Key Store
+  #     uses: aws-actions/aws-secretsmanager-get-secrets@v2
+  #     with:
+  #       secret-ids: |
+  #         EC2_PRIVATE_KEY, privatekey
+
+  #   - name: Setup private key
+  #     run: |
+  #       echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
+  #       chmod 0500 privatekey.pem
+
+  #   - name: Setup nginx proxy
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
+
+  #         sudo apt-get update
+  #         sudo apt-get install -y nginx
+
+  #         sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
+  #         server {
+  #         listen 80;
+  #         server_name bbd-grad-project.co.za www.bbd-grad-project.co.za;
+
+  #         location /.well-known/acme-challenge/ {
+  #             root /var/www/html;
+  #             try_files $uri =404;
+  #         }
+
+  #         location /api/ {
+  #             proxy_pass http://localhost:8000;
+  #             proxy_http_version 1.1;
+  #             proxy_set_header Upgrade $http_upgrade;
+  #             proxy_set_header Connection 'upgrade';
+  #             proxy_set_header Host $host;
+  #             proxy_cache_bypass $http_upgrade;
+  #             proxy_set_header X-Real-IP $remote_addr;
+  #             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  #             proxy_set_header X-Forwarded-Proto $scheme;
+  #         }
+
+  #         location /.well-known/webfinger {
+  #             proxy_pass http://localhost:8000;
+  #             proxy_http_version 1.1;
+  #             proxy_set_header Upgrade $http_upgrade;
+  #             proxy_set_header Connection 'upgrade';
+  #             proxy_set_header Host $host;
+  #             proxy_cache_bypass $http_upgrade;
+  #             proxy_set_header X-Real-IP $remote_addr;
+  #             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  #             proxy_set_header X-Forwarded-Proto $scheme;
+  #         }
+  #       }
+  #       NGINX_CONF
+  #       EOF
+
+  #   - name: Verify and Reload nginx
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+  #         sudo nginx -t && sudo systemctl reload nginx
+  #       '
+
+  #   - name: Cerbot
+  #     run: |
+  #       EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+  #       ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
+  #         sudo apt install certbot python3-certbot-nginx -y &&
+  #         sudo certbot --nginx -d bbd-grad-project.co.za -d www.bbd-grad-project.co.za --non-interactive --agree-tos --email liam.barkley@bbd.co.za
+  #       '
