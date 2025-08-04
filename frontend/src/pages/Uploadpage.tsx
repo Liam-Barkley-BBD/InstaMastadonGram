@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Upload, X, Image, Video, Camera, Smile } from "lucide-react";
-import "./styles/Uploadpage.css";
+import "./Uploadpage.css";
 
 type SelectedFile = {
   file: File;

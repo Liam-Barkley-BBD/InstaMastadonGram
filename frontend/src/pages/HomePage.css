@@ -1,0 +1,363 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Main container */
+.beegram-container {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Desktop Sidebar */
+.beegram-sidebar {
+  width: 280px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  z-index: 10;
+}
+
+.beegram-logo {
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.beegram-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.beegram-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.beegram-nav-btn.active {
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.2);
+}
+
+.beegram-profile {
+  margin-top: auto;
+}
+
+.beegram-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  border-radius: 1.25rem;
+}
+
+.beegram-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.beegram-username {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+}
+
+.beegram-handle {
+  font-size: 0.875rem;
+  color: #c084fc;
+}
+
+/* Main content area */
+.beegram-main {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+}
+
+/* Mobile header */
+.beegram-mobile-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.beegram-mobile-logo {
+  font-size: 1.5rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Feed */
+.beegram-feed {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Posts */
+.beegram-post {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+.beegram-post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.beegram-post-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.beegram-post-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  border: 2px solid rgba(251, 146, 60, 0.5);
+}
+
+.beegram-follow-btn {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+  border: none;
+  border-radius: 9999px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Post content */
+.beegram-post-image {
+  width: 100%;
+  border-radius: 1rem;
+  margin-bottom: 1rem;
+}
+
+.beegram-post-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.beegram-action-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.beegram-post-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.beegram-post-stats {
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
+  padding-top: 1rem;
+}
+
+.beegram-likes {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.beegram-post-description {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  color: #e5e7eb;
+}
+
+.beegram-timestamp,
+.beegram-comments-link {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.beegram-comments-link {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: block;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+/* Empty state */
+.beegram-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 24rem;
+  text-align: center;
+}
+
+.beegram-empty-emoji {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+  40%, 43% { transform: translate3d(0, -30px, 0); }
+  70% { transform: translate3d(0, -15px, 0); }
+  90% { transform: translate3d(0, -4px, 0); }
+}
+
+.beegram-empty-heading {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.beegram-empty-text {
+  font-size: 1.25rem;
+  color: #c084fc;
+  max-width: 28rem;
+  margin-bottom: 1.5rem;
+}
+
+.beegram-discover-btn {
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  border: none;
+  border-radius: 9999px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(251, 146, 60, 0.3);
+}
+
+/* Mobile bottom navigation */
+.beegram-mobile-nav {
+  display: none;
+  justify-content: space-around;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(139, 92, 246, 0.3);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+}
+
+.beegram-mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+  min-width: 60px;
+}
+
+.beegram-mobile-nav-btn.active {
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.2);
+}
+
+.beegram-mobile-nav-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .beegram-sidebar { display: none; }
+  .beegram-main { margin-left: 0; padding-bottom: 80px; }
+  .beegram-mobile-header { display: flex; }
+  .beegram-mobile-nav { display: flex; }
+  .beegram-feed { padding: 1rem 0.5rem; }
+  .beegram-post { 
+    margin-bottom: 1rem; 
+    padding: 1rem; 
+    border-radius: 1rem; 
+    background: rgba(0, 0, 0, 0.6); 
+  }
+  .beegram-empty-emoji { font-size: 3rem; }
+  .beegram-empty-heading { font-size: 1.5rem; }
+  .beegram-empty-text { font-size: 1rem; }
+}
+
+@media (max-width: 480px) {
+  .beegram-feed { padding: 0.5rem 0.25rem; }
+  .beegram-post { padding: 0.75rem; }
+  .beegram-mobile-nav { padding: 0.75rem; }
+  .beegram-mobile-nav-btn { min-width: 50px; padding: 0.375rem; }
+  .beegram-mobile-nav-label { font-size: 0.625rem; }
+}
