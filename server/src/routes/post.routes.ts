@@ -3,7 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import federation from "../services/federation.ts";
 import Actor from "../models/actor.model.ts";
 import Post from "../models/post.model.ts";
-import { Create, Note, PUBLIC_COLLECTION } from "@fedify/fedify";
+import { Create, Note, PUBLIC_COLLECTION, Image, Video, Link } from "@fedify/fedify";
 import crypto from "crypto";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
 import { uploadBufferToS3 } from "../utils/s3.ts";
@@ -15,7 +15,7 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 // router.use(isAuthenticated);
 
-router.post("/:username", upload.single("media"), async (req,  res) => {
+router.post("/:username", upload.single("media"), async (req, res) => {
     const { username } = req.params;
     const { content } = req.body;
 
@@ -35,18 +35,60 @@ router.post("/:username", upload.single("media"), async (req,  res) => {
     // multer puts the file info on req.file
     if (req.file) {
         try {
-        const fileBuffer = req.file.buffer;
-        const mimeType = req.file.mimetype;
+            const fileBuffer = req.file.buffer;
+            const mimeType = req.file.mimetype;
 
-        const allowedMimeTypes = ["image/png", "image/jpeg", "video/mp4"];
-        if (!allowedMimeTypes.includes(mimeType)) {
-            return res.status(400).json({ error: "Unsupported media type." });
-        }
-        mediaUrl = await uploadBufferToS3(fileBuffer, mimeType, "instamastadongram-media", `post-${username}`);
+            const allowedMimeTypes = ["image/png", "image/jpeg", "video/mp4"];
+            if (!allowedMimeTypes.includes(mimeType)) {
+                return res.status(400).json({ error: "Unsupported media type." });
+            }
+            mediaUrl = await uploadBufferToS3(fileBuffer, mimeType, "instamastadongram-media", `post-${username}`);
 
         } catch (err) {
-        console.error("S3 upload failed:", err);
-        return res.status(500).json({ error: "Failed to upload media." });
+            console.error("S3 upload failed:", err);
+            return res.status(500).json({ error: "Failed to upload media." });
+        }
+    }
+
+    const attachments: (Image | Video | Link)[] = [];
+    const attachmentData = [];
+
+    if (mediaUrl) {
+        const mimeType = req.file?.mimetype;
+
+        if (mimeType?.startsWith("image/")) {
+            attachments.push(new Image({
+                mediaType: mimeType,
+                url: new URL(mediaUrl),
+            }));
+
+            attachmentData.push({
+                type: "Image",
+                mediaType: mimeType,
+                url: mediaUrl,
+            });
+        } else if (mimeType?.startsWith("video/")) {
+            attachments.push(new Video({
+                mediaType: mimeType,
+                url: new URL(mediaUrl),
+            }));
+
+            attachmentData.push({
+                type: "Video",
+                mediaType: mimeType,
+                url: mediaUrl,
+            });
+        } else {
+            attachments.push(new Link({
+                mediaType: mimeType,
+                href: new URL(mediaUrl),
+            }));
+
+            attachmentData.push({
+                type: "Link",
+                mediaType: mimeType,
+                href: mediaUrl,
+            });
         }
     }
     // create post document in mongo
@@ -54,6 +96,7 @@ router.post("/:username", upload.single("media"), async (req,  res) => {
         actor: actor._id,
         content,
         created: new Date(),
+        attachments: attachmentData,
     });
 
     const postId = postDoc._id.toString();
@@ -64,14 +107,14 @@ router.post("/:username", upload.single("media"), async (req,  res) => {
     const digest = `SHA-256=${crypto.createHash("sha256").update(bodyString).digest("base64")}`;
 
     const fetchRequest = new Request(fullUrl, {
-    method: "POST",
-    headers: {
-        "host": req.get("host") ?? "",
-        "date": new Date().toUTCString(),
-        "content-type": "application/json",
-        "digest": digest,
-    },
-    body: bodyString,
+        method: "POST",
+        headers: {
+            "host": req.get("host") ?? "",
+            "date": new Date().toUTCString(),
+            "content-type": "application/json",
+            "digest": digest,
+        },
+        body: bodyString,
     });
 
     const ctx = federation.createContext(fetchRequest, undefined);
@@ -81,16 +124,19 @@ router.post("/:username", upload.single("media"), async (req,  res) => {
     const postUri = ctx.getObjectUri(Note, { identifier: username, id: postId });
 
     // create Note object
+
     const note = new Note({
         id: postUri,
         attribution: ctx?.getActorUri(username),
-        to: PUBLIC_COLLECTION,  
+        to: PUBLIC_COLLECTION,
         cc: ctx.getFollowersUri(username),
         content,
         mediaType: "text/html",
         published: Temporal.Instant.from(postDoc.created.toISOString()),
         url: postUri,
+        attachments, // include optional attachments
     });
+
 
     // create activity wrapping the Note
     const activity = new Create({

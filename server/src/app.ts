@@ -16,7 +16,12 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors())
+const allowedOrigins = ['http://localhost:5173', 'https://bbd-grad-program-2025.online'];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 
 app.set("trust proxy", true);
 
