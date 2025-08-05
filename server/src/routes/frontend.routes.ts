@@ -71,11 +71,50 @@ router.get('/following/:handle', async (req, res) => {
 router.get('/posts/:handle', async (req, res) => {
     try {
         const { handle } = req.params;
-        const postsData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox`);
+        const postsData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox?page=true`);
         res.json(postsData);
     } catch (error) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ error: error });
+    }
+});
+
+router.get('/profile/:handle/counts', async (req, res) => {
+    try {
+        const { handle } = req.params;
+        
+        // Fetch all count endpoints in parallel
+        const [followersResponse, followingResponse, postsResponse] = await Promise.allSettled([
+            makeActivityPubRequest(`https://mastodon.social/users/${handle}/followers`),
+            makeActivityPubRequest(`https://mastodon.social/users/${handle}/following`),
+            makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox`)
+        ]);
+        
+        const counts = {
+            followersCount: 0,
+            followingCount: 0,
+            postsCount: 0
+        };
+        
+        // Extract follower count
+        if (followersResponse.status === 'fulfilled' && followersResponse.value) {
+            counts.followersCount = followersResponse.value.totalItems || 0;
+        }
+        
+        // Extract following count
+        if (followingResponse.status === 'fulfilled' && followingResponse.value) {
+            counts.followingCount = followingResponse.value.totalItems || 0;
+        }
+        
+        // Extract posts count
+        if (postsResponse.status === 'fulfilled' && postsResponse.value) {
+            counts.postsCount = postsResponse.value.totalItems || 0;
+        }
+        
+        res.json(counts);
+    } catch (error) {
+        console.error('Error fetching profile counts:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

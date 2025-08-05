@@ -13,7 +13,6 @@ interface UserProfile {
     following: Following[];
     posts: Post[];
     publishedDate: string;
-    discoverable: boolean;
 }
 
 interface Follower {
@@ -37,9 +36,15 @@ interface Post {
     content: string;
     publishedDate: string;
     url: string;
-    replies?: number;
-    shares?: number;
     likes?: number;
+}
+
+interface PaginatedPostsResponse {
+    items: Post[];
+    totalItems: number;
+    hasNextPage: boolean;
+    nextPage?: number;
+    pagesLoaded: number;
 }
 
 export class FedifyHandler {
@@ -84,24 +89,85 @@ export class FedifyHandler {
         }
     }
 
+    private async resolveUserFromUrl(userUrl: string): Promise<Follower | Following | null> {
+        try {
+            const userObject = await this.makeRequest(userUrl, {}, 0, true);
+            
+            return {
+                id: userObject.id,
+                username: userObject.preferredUsername || this.extractUsernameFromUrl(userUrl),
+                displayName: userObject.name || userObject.preferredUsername || this.extractUsernameFromUrl(userUrl),
+                url: userObject.url || userUrl,
+                avatar: userObject.icon?.url
+            };
+        } catch (error) {
+            console.warn(`Failed to resolve user from URL ${userUrl}:`, error);
+            const username = this.extractUsernameFromUrl(userUrl);
+            return {
+                id: userUrl,
+                username: username,
+                displayName: username,
+                url: userUrl,
+                avatar: undefined
+            };
+        }
+    }
+
+    private extractUsernameFromUrl(url: string): string {
+        try {
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/').filter(part => part);
+            
+            if (pathParts.includes('users') && pathParts.length > 1) {
+                const userIndex = pathParts.indexOf('users');
+                return pathParts[userIndex + 1] || 'unknown';
+            }
+            // Handle @username format
+            const lastPart = pathParts[pathParts.length - 1];
+            if (lastPart?.startsWith('@')) {
+                return lastPart.substring(1);
+            }
+            
+            return lastPart || 'unknown';
+        } catch (error) {
+            return 'unknown';
+        }
+    }
+
+    private async resolveMultipleUsers(userUrls: string[], maxConcurrent: number = 5): Promise<(Follower | Following)[]> {
+        const results: (Follower | Following)[] = [];
+        
+        for (let i = 0; i < userUrls.length; i += maxConcurrent) {
+            const batch = userUrls.slice(i, i + maxConcurrent);
+            const batchPromises = batch.map(url => this.resolveUserFromUrl(url));
+            const batchResults = await Promise.allSettled(batchPromises);
+            
+            batchResults.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    results.push(result.value);
+                }
+            });
+        }
+        
+        return results;
+    }
+
     getLoggedInUser = async () => {
         return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
     };
 
+    // Optimized getProfile - only fetches basic info + counts + first 20 posts
     getProfile = async (handle: string): Promise<UserProfile> => {
-        // Get the main profile data through Express proxy
         const rawProfile = await this.makeRequest(`${this.EXPRESS_URL}/profile/${handle}`, {}, 0, false);
         
-        // Parse the basic profile info
         const profileData: Partial<UserProfile> = {
             id: rawProfile.id,
             username: rawProfile.preferredUsername,
             displayName: rawProfile.name || rawProfile.preferredUsername,
-            bio: rawProfile.summary || "",
+            bio: this.stripHtml(rawProfile.summary || ""),
             url: rawProfile.url,
             avatar: rawProfile.icon?.url,
             publishedDate: rawProfile.published,
-            discoverable: rawProfile.discoverable || false,
             followers: [],
             following: [],
             posts: [],
@@ -110,119 +176,219 @@ export class FedifyHandler {
             postsCount: 0
         };
 
-        // Fetch additional data in parallel through Express proxy
-        const [followersData, followingData, postsData] = await Promise.allSettled([
-            this.getFollowersProxy(handle),
-            this.getFollowingProxy(handle),
-            this.getPostsProxy(handle)
+        // Fetch counts and initial posts in parallel
+        const [countsData, postsData] = await Promise.allSettled([
+            this.getProfileCounts(handle),
+            this.getPostsPaginated(handle, 1, 20) // Start with page 1, 20 posts
         ]);
 
-        // Handle followers
-        if (followersData.status === 'fulfilled' && followersData.value) {
-            profileData.followers = followersData.value.items || [];
-            profileData.followersCount = followersData.value.totalItems || profileData?.followers?.length;
+        // Handle counts
+        if (countsData.status === 'fulfilled' && countsData.value) {
+            profileData.followersCount = countsData.value.followersCount || 0;
+            profileData.followingCount = countsData.value.followingCount || 0;
+            profileData.postsCount = countsData.value.postsCount || 0;
         }
 
-        // Handle following
-        if (followingData.status === 'fulfilled' && followingData.value) {
-            profileData.following = followingData.value.items || [];
-            profileData.followingCount = followingData.value.totalItems || profileData?.following?.length;
-        }
-
-        // Handle posts
+        // Handle initial posts
         if (postsData.status === 'fulfilled' && postsData.value) {
             profileData.posts = postsData.value.items || [];
-            profileData.postsCount = postsData.value.totalItems || profileData?.posts?.length;
         }
 
         return profileData as UserProfile;
     };
 
-    // Helper methods that use Express proxy to avoid CORS
-    private getFollowersProxy = async (handle: string, maxPages: number = 5): Promise<any> => {
+    // New method to get just the counts
+    private getProfileCounts = async (handle: string): Promise<{
+        followersCount: number;
+        followingCount: number;
+        postsCount: number;
+    }> => {
         try {
-            const followersResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/followers/${handle}?maxPages=${maxPages}`, 
+            const countsResponse = await this.makeRequest(
+                `${this.EXPRESS_URL}/profile/${handle}/counts`, 
                 {}, 0, false
             );
             
-            // Parse followers into clean format
-            const followers = followersResponse.orderedItems?.map((follower: any) => ({
-                id: follower.id,
-                username: follower.preferredUsername || follower.name?.split('@')[0],
-                displayName: follower.name || follower.preferredUsername,
-                url: follower.url || follower.id,
-                avatar: follower.icon?.url
-            })) || [];
-
             return {
-                totalItems: followersResponse.totalItems || 0,
-                items: followers,
-                pagesLoaded: followersResponse.pagesLoaded || 0
+                followersCount: countsResponse.followersCount || 0,
+                followingCount: countsResponse.followingCount || 0,
+                postsCount: countsResponse.postsCount || 0
             };
         } catch (error) {
-            console.warn('Failed to fetch followers:', error);
-            return { totalItems: 0, items: [], pagesLoaded: 0 };
+            console.warn('Failed to fetch profile counts:', error);
+            return { followersCount: 0, followingCount: 0, postsCount: 0 };
         }
     };
 
-    private getFollowingProxy = async (handle: string, maxPages: number = 5): Promise<any> => {
-        try {
-            const followingResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/following/${handle}?maxPages=${maxPages}`, 
-                {}, 0, false
-            );
-            
-            // Parse following into clean format
-            const following = followingResponse.orderedItems?.map((person: any) => ({
-                id: person.id,
-                username: person.preferredUsername || person.name?.split('@')[0],
-                displayName: person.name || person.preferredUsername,
-                url: person.url || person.id,
-                avatar: person.icon?.url
-            })) || [];
-
-            return {
-                totalItems: followingResponse.totalItems || 0,
-                items: following,
-                pagesLoaded: followingResponse.pagesLoaded || 0
-            };
-        } catch (error) {
-            console.warn('Failed to fetch following:', error);
-            return { totalItems: 0, items: [], pagesLoaded: 0 };
-        }
-    };
-
-    private getPostsProxy = async (handle: string, maxPages: number = 3): Promise<any> => {
+    // New paginated posts method
+    getPostsPaginated = async (
+        handle: string, 
+        page: number = 1, 
+        limit: number = 20
+    ): Promise<PaginatedPostsResponse> => {
         try {
             const postsResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/posts/${handle}?maxPages=${maxPages}`, 
+                `${this.EXPRESS_URL}/posts/${handle}?page=${page}&limit=${limit}`, 
                 {}, 0, false
             );
             
-            // Parse posts into clean format
-            const posts = postsResponse.orderedItems?.map((post: any) => ({
-                id: post.id,
-                content: this.stripHtml(post.object?.content || post.content || ""),
-                publishedDate: post.published || post.object?.published,
-                url: post.object?.url || post.url,
-                replies: post.object?.replies?.totalItems || 0,
-                shares: post.object?.shares?.totalItems || 0,
-                likes: post.object?.likes?.totalItems || 0
-            })) || [];
+            const orderedItems = postsResponse.orderedItems || [];
+            let posts: Post[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    posts = await this.resolveMultiplePosts(orderedItems);
+                } else {
+                    // Already post objects
+                    posts = orderedItems.map((post: any) => ({
+                        id: post.id,
+                        content: this.stripHtml(post.object?.content || post.content || "") || post.object.attachment,
+                        publishedDate: post.published || post.object?.published,
+                        url: post.object?.url || post.url,
+                        replies: post.object?.replies?.totalItems || 0,
+                        shares: post.object?.shares?.totalItems || 0,
+                        likes: post.object?.likes?.totalItems || 0
+                    }));
+                }
+            }
 
             return {
-                totalItems: postsResponse.totalItems || 0,
                 items: posts,
-                pagesLoaded: postsResponse.pagesLoaded || 0
+                totalItems: postsResponse.totalItems || 0,
+                hasNextPage: posts.length === limit && (page * limit) < (postsResponse.totalItems || 0),
+                nextPage: posts.length === limit ? page + 1 : undefined,
+                pagesLoaded: page
             };
         } catch (error) {
-            console.warn('Failed to fetch posts:', error);
-            return { totalItems: 0, items: [], pagesLoaded: 0 };
+            console.warn('Failed to fetch paginated posts:', error);
+            return { 
+                items: [], 
+                totalItems: 0, 
+                hasNextPage: false, 
+                pagesLoaded: 0 
+            };
         }
     };
 
-    // Helper method to strip HTML from content
+    // Method to load followers when needed
+    getFollowersPaginated = async (handle: string, page: number = 1, limit: number = 50): Promise<{
+        items: Follower[];
+        totalItems: number;
+        hasNextPage: boolean;
+        nextPage?: number;
+    }> => {
+        try {
+            const followersResponse = await this.makeRequest(
+                `${this.EXPRESS_URL}/followers/${handle}?page=${page}&limit=${limit}`, 
+                {}, 0, false
+            );
+            
+            const orderedItems = followersResponse.orderedItems || [];
+            let followers: Follower[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    followers = await this.resolveMultipleUsers(orderedItems);
+                } else {
+                    followers = orderedItems.map((follower: any) => ({
+                        id: follower.id,
+                        username: follower.preferredUsername || follower.name?.split('@')[0],
+                        displayName: follower.name || follower.preferredUsername,
+                        url: follower.url || follower.id,
+                        avatar: follower.icon?.url
+                    }));
+                }
+            }
+
+            return {
+                items: followers,
+                totalItems: followersResponse.totalItems || 0,
+                hasNextPage: followers.length === limit && (page * limit) < (followersResponse.totalItems || 0),
+                nextPage: followers.length === limit ? page + 1 : undefined
+            };
+        } catch (error) {
+            console.warn('Failed to fetch paginated followers:', error);
+            return { items: [], totalItems: 0, hasNextPage: false };
+        }
+    };
+
+    // Method to load following when needed
+    getFollowingPaginated = async (handle: string, page: number = 1, limit: number = 50): Promise<{
+        items: Following[];
+        totalItems: number;
+        hasNextPage: boolean;
+        nextPage?: number;
+    }> => {
+        try {
+            const followingResponse = await this.makeRequest(
+                `${this.EXPRESS_URL}/following/${handle}?page=${page}&limit=${limit}`, 
+                {}, 0, false
+            );
+            
+            const orderedItems = followingResponse.orderedItems || [];
+            let following: Following[] = [];
+            
+            if (orderedItems.length > 0) {
+                if (typeof orderedItems[0] === 'string') {
+                    following = await this.resolveMultipleUsers(orderedItems);
+                } else {
+                    following = orderedItems.map((person: any) => ({
+                        id: person.id,
+                        username: person.preferredUsername || person.name?.split('@')[0],
+                        displayName: person.name || person.preferredUsername,
+                        url: person.url || person.id,
+                        avatar: person.icon?.url
+                    }));
+                }
+            }
+
+            return {
+                items: following,
+                totalItems: followingResponse.totalItems || 0,
+                hasNextPage: following.length === limit && (page * limit) < (followingResponse.totalItems || 0),
+                nextPage: following.length === limit ? page + 1 : undefined
+            };
+        } catch (error) {
+            console.warn('Failed to fetch paginated following:', error);
+            return { items: [], totalItems: 0, hasNextPage: false };
+        }
+    };
+
+    private async resolveMultiplePosts(postUrls: string[], maxConcurrent: number = 5): Promise<Post[]> {
+        const results: Post[] = [];
+        
+        for (let i = 0; i < postUrls.length; i += maxConcurrent) {
+            const batch = postUrls.slice(i, i + maxConcurrent);
+            const batchPromises = batch.map(url => this.resolvePostFromUrl(url));
+            const batchResults = await Promise.allSettled(batchPromises);
+            
+            batchResults.forEach(result => {
+                if (result.status === 'fulfilled' && result.value) {
+                    results.push(result.value);
+                }
+            });
+        }
+        
+        return results;
+    }
+
+    private async resolvePostFromUrl(postUrl: string): Promise<Post | null> {
+        try {
+            const postObject = await this.makeRequest(postUrl, {}, 0, true);
+            
+            return {
+                id: postObject.id,
+                content: this.stripHtml(postObject.object?.content || postObject.content || ""),
+                publishedDate: postObject.published || postObject.object?.published,
+                url: postObject.object?.url || postObject.url || postUrl,
+                likes: postObject.object?.likes?.totalItems || postObject.likes?.totalItems || 0
+            };
+        } catch (error) {
+            console.warn(`Failed to resolve post from URL ${postUrl}:`, error);
+            return null;
+        }
+    }
+
     private stripHtml = (html: string): string => {
         if (typeof document !== 'undefined') {
             const tmp = document.createElement('div');
