@@ -1,10 +1,12 @@
 import { Router } from "express";
 import federation from "../services/federation.ts";
-import { Follow, isActor } from "@fedify/fedify";
+import { Follow, isActor, type Recipient } from "@fedify/fedify";
 import { findUserByHandle } from "../services/actor.service.ts";
+import crypto from "crypto";
+import { isAuthenticated } from "../middleware/authMiddleware.ts";
 
 const router = Router();
-// router.use(isAuthenticated);
+router.use(isAuthenticated);
 
 router.get('/', async (req, res) => {
   try {
@@ -19,39 +21,46 @@ router.get('/', async (req, res) => {
   }
 })
 
-router.post('/:username/following', async (req, res) => {
+router.post('/:username/follow', async (req, res) => {
   const username = req.params.username;
   const handle = req.body.actor;
 
-  const actor = await fetch(`https://mastodon.social/.well-known/webfinger?resource=acct:clivedev@mastodon.social`, {
-    headers: { 'Accept': 'application/jrd+json, application/json' }
-  }); //TODO: build up the url to fetch actor to send an activity to
+  const domainUsername = extractUsernameAndDomain(handle);
 
-  const actorInformation = await actor.json();
-  const savedActor = await findUserByHandle(username);
+  const externalActorResponse = await fetch(`https://${domainUsername?.domain}/users/${domainUsername?.username}`, {
+    method: 'GET',
+    headers: { 'Accept': 'application/activity+json' }
+  });
+  const externalActorInformation = await externalActorResponse.json();
   
   if (typeof handle !== 'string') {
     return res.status(400).send('Invalid actor handle or URL');
   }
 
   try {
-    const externalContext = federation.createContext(new URL(actorInformation.links.find((info: any) => info.rel.toLowerCase() === 'self').href), undefined);
-    const act = await externalContext.lookupObject(handle.trim());
+    const externalContext = federation.createContext(new URL(externalActorInformation.url), undefined);
+    const externalActor = await externalContext.lookupObject(handle.trim());
+    const savedActor = await findUserByHandle(username);
     const internalContext = federation.createContext(new URL(savedActor?.uri!), undefined);
 
-    const senderKeyPairs = await internalContext.getActorKeyPairs(username);
-
-    if (!isActor(act)) {
+    if (!isActor(externalActor)) {
       return res.status(400).send('Invalid actor handle or URL');
     }
 
-    await externalContext.sendActivity(
-      senderKeyPairs,
-      act,
+    const activityDetails: ActivityDetails = {
+      actor: savedActor?.uri!,
+      object: `${externalActor.id}`,
+      domain: (new URL(savedActor?.uri!)).origin,
+      username: username
+    }
+    await internalContext.sendActivity(
+      { username: username },
+      externalActor satisfies Recipient,
       new Follow({
-        actor: internalContext.getActorUri(username),
-        object: act.id,
-        to: act.id,
+        id: new URL(createFollowActivityId(activityDetails)),
+        actor: new URL(savedActor?.uri || ""),
+        object: externalActor.id,
+        to: externalActor.id,
       })
     );
 
@@ -61,5 +70,37 @@ router.post('/:username/following', async (req, res) => {
     return res.status(500).send('Internal server error');
    }
 });
+
+const extractUsernameAndDomain = (handle: string): {
+  username: string,
+  domain: string
+} | null => {
+  const match = handle.match(/^@?([^@]+)@([^@]+)$/);
+  if (match) {
+    return {
+      username: match[1],
+      domain: match[2]
+    };
+  }
+  return null;
+}
+
+type ActivityDetails = {
+  actor: string,
+  object: string,
+  domain: string,
+  username: string
+}
+
+const createFollowActivityId = (activityDetails: ActivityDetails): string => {
+  const followActivity = {
+    '@context': 'https://www.w3.org/ns/activitystreams',
+    type: 'Follow',
+    actor: activityDetails.actor,
+    object: activityDetails.object
+  };
+  const hash = crypto.createHash('sha256').update(JSON.stringify(followActivity)).digest('hex');
+  return `${activityDetails.domain}/${activityDetails.username}#follow/${hash}`;
+}
 
 export default router;

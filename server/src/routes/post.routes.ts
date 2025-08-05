@@ -8,7 +8,7 @@ import crypto from "crypto";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
 
 const router = express.Router();
-// router.use(isAuthenticated);
+router.use(isAuthenticated);
 
 router.post("/:username", async (req, res) => {
     const { username } = req.params;
