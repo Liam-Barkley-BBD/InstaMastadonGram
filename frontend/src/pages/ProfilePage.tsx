@@ -63,7 +63,9 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const profileData: any = await fedifyHandler.current.getProfile("CatsOfYore");
+        const profileData: UserProfile = await fedifyHandler.current.getProfile(
+          "CatsOfYore"
+        );
         console.log('Fetched profile data:', profileData);
         setProfile(profileData);
         setPosts(profileData.posts || []);
