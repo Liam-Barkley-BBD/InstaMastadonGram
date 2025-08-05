@@ -2,9 +2,16 @@ import mongoose from "mongoose";
 import app from "./app.ts";
 import "./utils/loggers.ts";
 
-const PORT = 8000;
+const PORT = process.env.PORT || 8000;
 
-mongoose.connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/instaMastadonGram")
+app.get("/health", (req, res) => {
+  res
+    .status(200)
+    .json({ status: "healthy", timestamp: new Date().toISOString() });
+});
+
+mongoose
+  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/")
   .then(() => {
     console.log("MongoDB connected");
     app.listen(PORT, () => {

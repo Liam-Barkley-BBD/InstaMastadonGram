@@ -1,11 +1,10 @@
-import React from 'react';
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Home, Search, Plus, User } from 'lucide-react';
-import UploadMediaPage from './pages/Uploadpage';
 import HomePage from "./pages/HomePage";
 import Login from './pages/LoginPage';
 import ProfilePage from "./pages/ProfilePage";
-import SearchUsersPage from './pages/SearchUsers';
+import SearchUsersPage from "./pages/SearchUsers";
+import UploadMediaPage from "./pages/Uploadpage";
 import './App.css';
 
 function App() {
@@ -81,8 +80,8 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/me" element={<ProfilePage />} />
-            <Route path="/search" element={<div>Search Page Coming Soon</div>} />
-            <Route path="/create" element={<div>Create Page Coming Soon</div>} />
+            <Route path="/search" element={<SearchUsersPage />} />
+            <Route path="/create" element={<UploadMediaPage />} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </div>
