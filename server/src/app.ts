@@ -10,7 +10,7 @@ import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
 import userRoutes from "./routes/users.routes.ts"
 import frontendRouter from "./routes/frontend.routes.ts";
-import cors from "cors";
+import cors from "cors"
 
 dotenv.config();
 
@@ -27,7 +27,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI!,
+    mongoUrl: process.env.MONGO_URI || "mongodb://localhost:27017/",
     touchAfter: 24 * 3600,
     ttl: 14 * 24 * 60 * 60
   })

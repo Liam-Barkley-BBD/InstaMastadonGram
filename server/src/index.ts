@@ -11,7 +11,7 @@ app.get("/health", (req, res) => {
 });
 
 mongoose
-  .connect(process.env.MONGO_URI || "mongodb://mongodb:27017/instaMastadonGram")
+  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/")
   .then(() => {
     console.log("MongoDB connected");
     app.listen(PORT, () => {
