@@ -205,7 +205,7 @@ federation
   });
 
 federation
-  .setFollowersDispatcher("/users/{identifier}/followers", async (ctx, identifier, cursor) => {
+  .setFollowersDispatcher("api/users/{identifier}/followers", async (ctx, identifier, cursor) => {
       const PAGE_SIZE = 10;
 
       if (cursor == null) return null;
