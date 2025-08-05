@@ -16,12 +16,14 @@ dotenv.config();
 
 const app = express();
 
+app.use(cors())
+
 app.set("trust proxy", true);
 
-app.use(integrateFederation(federation, (req) => undefined));
+app.use(integrateFederation(federation, (req) => req.user));
 
 app.use(express.json());
-app.use(cors())
+
 app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,

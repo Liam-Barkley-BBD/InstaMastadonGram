@@ -6,11 +6,16 @@ import Post from "../models/post.model.ts";
 import { Create, Note, PUBLIC_COLLECTION } from "@fedify/fedify";
 import crypto from "crypto";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
+import { uploadBufferToS3 } from "../utils/s3.ts";
+
+import multer from "multer";
+
 
 const router = express.Router();
-router.use(isAuthenticated);
+const upload = multer({ storage: multer.memoryStorage() });
+// router.use(isAuthenticated);
 
-router.post("/:username", async (req, res) => {
+router.post("/:username", upload.single("media"), async (req,  res) => {
     const { username } = req.params;
     const { content } = req.body;
 
@@ -23,6 +28,27 @@ router.post("/:username", async (req, res) => {
         return res.status(404).json({ error: "User not found." });
     }
 
+    console.log("user found");
+
+    let mediaUrl;
+
+    // multer puts the file info on req.file
+    if (req.file) {
+        try {
+        const fileBuffer = req.file.buffer;
+        const mimeType = req.file.mimetype;
+
+        const allowedMimeTypes = ["image/png", "image/jpeg", "video/mp4"];
+        if (!allowedMimeTypes.includes(mimeType)) {
+            return res.status(400).json({ error: "Unsupported media type." });
+        }
+        mediaUrl = await uploadBufferToS3(fileBuffer, mimeType, "instamastadongram-media", `post-${username}`);
+
+        } catch (err) {
+        console.error("S3 upload failed:", err);
+        return res.status(500).json({ error: "Failed to upload media." });
+        }
+    }
     // create post document in mongo
     const postDoc = await Post.create({
         actor: actor._id,
