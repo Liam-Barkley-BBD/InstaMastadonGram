@@ -8,7 +8,7 @@ import { isAuthenticated } from "../middleware/authMiddleware.ts";
 const router = Router();
 router.use(isAuthenticated);
 
-router.get('/', async (req, res) => {
+router.get('/me', async (req, res) => {
   try {
     const user = req.user;
     if(!user) {
