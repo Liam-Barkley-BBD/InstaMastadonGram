@@ -19,7 +19,7 @@ export interface ActorDoc extends Document {
 }
 
 const actorSchema = new Schema<ActorDoc>({
-  userId: { type: String, required: true },
+  userId: String,
   uri: { type: String, required: true },
   inboxUri: { type: String, required: true },
   handle: { type: String, required: true },

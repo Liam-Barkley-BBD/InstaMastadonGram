@@ -1,4 +1,4 @@
-import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient } from "@fedify/fedify";
+import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient, isActor, exportJwk } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
@@ -28,6 +28,7 @@ federation
     else console.log("Found user!")
 
     const keys = await ctx.getActorKeyPairs(identifier);
+
     return new Person({
       id: ctx.getActorUri(identifier),
       preferredUsername: identifier,
@@ -55,18 +56,24 @@ federation
     const keyPairs = [];
 
     if (actor.keys?.rsa) {
-      keyPairs.push({
-        publicKey: await importJwk(actor.keys.rsa.publicKey, "public"),
-        privateKey: await importJwk(actor.keys.rsa.privateKey, "private"),
-      });
+    try {
+      const pub = await importJwk(actor.keys.rsa.publicKey, "public");
+      const priv = await importJwk(actor.keys.rsa.privateKey, "private");
+      keyPairs.push({ publicKey: pub, privateKey: priv });
+    } catch (e) {
+      console.error("RSA import failed:", e);
     }
-
-    if (actor.keys?.ed25519) {
-      keyPairs.push({
-        publicKey: await importJwk(actor.keys.ed25519.publicKey, "public"),
-        privateKey: await importJwk(actor.keys.ed25519.privateKey, "private"),
-      });
+  }
+  
+  if (actor.keys?.ed25519) {
+    try {
+      const pub = await importJwk(actor.keys.ed25519.publicKey, "public");
+      const priv = await importJwk(actor.keys.ed25519.privateKey, "private");
+      keyPairs.push({ publicKey: pub, privateKey: priv });
+    } catch (e) {
+      console.error("Ed25519 import failed:", e);
     }
+  }
 
     return keyPairs;
   });
