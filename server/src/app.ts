@@ -10,6 +10,7 @@ import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
 import userRoutes from "./routes/users.routes.ts"
 import frontendRouter from "./routes/frontend.routes.ts";
+import searchRouter from "./routes/search.routes.ts"
 import cors from "cors"
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes)
 app.use("/api/frontend", frontendRouter);
+app.use("/api/search", searchRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello, Fedify + Google Auth!");
