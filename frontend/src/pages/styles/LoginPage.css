@@ -1,0 +1,308 @@
+.login-page {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #581c87 0%, #1e3a8a 50%, #312e81 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.background-shapes {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.shape {
+  position: absolute;
+  background: rgba(168, 85, 247, 0.1);
+  border-radius: 50%;
+  animation: float 20s infinite ease-in-out;
+}
+
+.shape-1 {
+  width: 200px;
+  height: 200px;
+  top: -100px;
+  left: -100px;
+  animation-delay: 0s;
+}
+
+.shape-2 {
+  width: 150px;
+  height: 150px;
+  top: 50%;
+  right: -75px;
+  animation-delay: -5s;
+}
+
+.shape-3 {
+  width: 100px;
+  height: 100px;
+  bottom: -50px;
+  left: 15%;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 0.2;
+  }
+}
+
+.login-container {
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 1.5rem 1.25rem;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease-out;
+}
+
+.logo-container {
+  margin-bottom: 1.5rem;
+}
+
+.logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  margin: 0 auto 1rem;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+}
+
+.welcome-text {
+  margin-bottom: 1.5rem;
+}
+
+.welcome-text h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-text p {
+  color: #d1d5db;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.google-btn {
+  width: 100%;
+  background: white;
+  color: #374151;
+  border: none;
+  border-radius: 12px;
+  padding: 0.875rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+@media (min-width: 480px) {
+  .login-page {
+    padding: 1.5rem;
+  }
+
+  .login-container {
+    padding: 2rem 1.5rem;
+    max-width: 400px;
+  }
+
+  .logo {
+    width: 65px;
+    height: 65px;
+    border-radius: 18px;
+    margin: 0 auto 1.25rem;
+  }
+
+  .logo-text {
+    font-size: 1.6rem;
+  }
+
+  .welcome-text h1 {
+    font-size: 1.75rem;
+  }
+
+  .welcome-text p {
+    font-size: 0.95rem;
+  }
+
+  .google-btn {
+    padding: 1rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .login-page {
+    padding: 2rem;
+  }
+
+  .login-container {
+    padding: 2.5rem 2rem;
+    max-width: 420px;
+  }
+
+  .logo-container {
+    margin-bottom: 2rem;
+  }
+
+  .logo {
+    width: 70px;
+    height: 70px;
+    border-radius: 18px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .logo-text {
+    font-size: 1.8rem;
+  }
+
+  .welcome-text {
+    margin-bottom: 2rem;
+  }
+
+  .welcome-text h1 {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .welcome-text p {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .google-btn {
+    padding: 1.125rem 1.75rem;
+    font-size: 1rem;
+  }
+
+  .shape-1 {
+    width: 250px;
+    height: 250px;
+    top: -125px;
+    left: -125px;
+  }
+
+  .shape-2 {
+    width: 180px;
+    height: 180px;
+    right: -90px;
+  }
+
+  .shape-3 {
+    width: 120px;
+    height: 120px;
+    bottom: -60px;
+  }
+}
+
+@media (min-width: 768px) {
+  .login-container {
+    padding: 3rem 2.5rem;
+    max-width: 450px;
+  }
+
+  .logo {
+    width: 75px;
+    height: 75px;
+    border-radius: 20px;
+    margin: 0 auto 1.75rem;
+  }
+
+  .logo-text {
+    font-size: 2rem;
+  }
+
+  .welcome-text h1 {
+    font-size: 2.25rem;
+  }
+
+  .welcome-text p {
+    font-size: 1.1rem;
+  }
+
+  .google-btn {
+    padding: 1.25rem 2rem;
+    font-size: 1.05rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .login-container {
+    padding: 3.5rem 3rem;
+    max-width: 480px;
+  }
+
+  .logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 22px;
+    margin: 0 auto 2rem;
+  }
+
+  .logo-text {
+    font-size: 2.2rem;
+  }
+
+  .welcome-text h1 {
+    font-size: 2.5rem;
+  }
+
+  .welcome-text p {
+    font-size: 1.15rem;
+  }
+
+  .google-btn {
+    padding: 1.5rem 2.25rem;
+    font-size: 1.1rem;
+  }
+
+  .shape-1 {
+    width: 300px;
+    height: 300px;
+    top: -150px;
+    left: -150px;
+  }
+
+  .shape-2 {
+    width: 200px;
+    height: 200px;
+    right: -100px;
+  }
+
+  .shape-3 {
+    width: 150px;
+    height: 150px;
+    bottom: -75px;
+  }
+}

@@ -1,6 +1,5 @@
-// Login.tsx
 import React, { useState, useEffect } from 'react';
-import './LoginPage.css';
+import './styles/LoginPage.css';
 
 const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
