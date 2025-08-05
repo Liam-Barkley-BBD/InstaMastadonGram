@@ -25,7 +25,7 @@ router.get('/profile/:handle', async (req, res) => {
         const { handle } = req.params;
         const profileData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}`);
         res.json(profileData);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching profile:', error);
         res.status(500).json({ error: error.message });
     }
@@ -43,7 +43,7 @@ router.get('/followers/:handle', async (req, res) => {
         );
         
         res.json(followersData);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching followers:', error);
         res.status(500).json({ error: error.message });
     }
@@ -61,7 +61,7 @@ router.get('/following/:handle', async (req, res) => {
         );
         
         res.json(followingData);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching following:', error);
         res.status(500).json({ error: error.message });
     }
@@ -112,13 +112,13 @@ router.get('/profile/:handle/counts', async (req, res) => {
         }
         
         res.json(counts);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching profile counts:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-const getAllPaginatedItems = async (initialUrl, maxPages = 5) => {
+const getAllPaginatedItems = async (initialUrl: any, maxPages: number = 5) => {
     const allItems = [];
     let currentUrl = initialUrl;
     let pageCount = 0;
