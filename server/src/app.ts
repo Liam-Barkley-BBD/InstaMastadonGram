@@ -27,7 +27,10 @@ app.set("trust proxy", true);
 
 app.use(integrateFederation(federation, (req) => req.user));
 
-app.use(express.json());
+app.use("/api/posts", postRoutes);
+
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.use(session({
   secret: process.env.SESSION_SECRET!,
@@ -43,7 +46,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
-app.use("/api/posts", postRoutes)
+
 app.use("/api/frontend", frontendRouter);
 
 app.get("/", (req, res) => {
