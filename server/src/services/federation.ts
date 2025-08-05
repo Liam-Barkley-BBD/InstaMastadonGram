@@ -1,4 +1,4 @@
-import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient, isActor, exportJwk } from "@fedify/fedify";
+import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient, isActor } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
@@ -205,6 +205,20 @@ federation
     const recipient = to.identifier;
     // Do something with the recipient
     console.log(`Received Create Activity from recipient: ${recipient}`);
+  })
+
+  .on(Accept, async (ctx, accept) => {
+    console.log(ctx);
+    const follow = await accept.getObject();
+    if (!(follow instanceof Follow)) return;
+    const following = await accept.getActor();
+    if (!isActor(following)) return;
+    const follower = follow.actorId;
+    if (follower == null) return;
+    const parsed = ctx.parseUri(follower);
+    if (parsed == null || parsed.type !== "actor") return;
+    const followingId = ""
+    if (followingId == null) return;
   })
 
   .onError(async (ctx, error) => {
