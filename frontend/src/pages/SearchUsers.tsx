@@ -1,211 +1,151 @@
-import { useState, useEffect } from "react";
-import {
-  Search,
-  UserPlus,
-  UserCheck,
-  MapPin,
-  Users2,
-  Verified,
-} from "lucide-react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
+import { Search, UserPlus, UserCheck, MapPin, Users2 } from "lucide-react";
 import type { UserProfile } from "../types";
-
+import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 
-const mockUsers = [
-  {
-    id: 1,
-    username: "alexadventures",
-    displayName: "Alexandra Smith",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108755-2616b15c2177?w=150&h=150&fit=crop&crop=face",
-    verified: true,
-    followers: "12.5K",
-    following: "892",
-    posts: "234",
-    bio: "Adventure photographer • World traveler ✈️",
-    location: "San Francisco, CA",
-    mutualFriends: 5,
-    isOnline: true,
-  },
-  {
-    id: 2,
-    username: "foodie_marcus",
-    displayName: "Marcus Chen",
-    avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    verified: false,
-    followers: "8.2K",
-    following: "1.2K",
-    posts: "456",
-    bio: "Chef & Food Blogger 🍜 Sharing culinary adventures",
-    location: "New York, NY",
-    mutualFriends: 12,
-    isOnline: false,
-  },
-  {
-    id: 3,
-    username: "nature_sarah",
-    displayName: "Sarah Johnson",
-    avatar:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-    verified: false,
-    followers: "5.8K",
-    following: "543",
-    posts: "189",
-    bio: "Nature lover 🌿 Wildlife photographer",
-    location: "Portland, OR",
-    mutualFriends: 3,
-    isOnline: true,
-  },
-  {
-    id: 4,
-    username: "techguru_dev",
-    displayName: "David Park",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    verified: true,
-    followers: "15.3K",
-    following: "234",
-    posts: "567",
-    bio: "Software Engineer • Tech Enthusiast 💻",
-    location: "Seattle, WA",
-    mutualFriends: 8,
-    isOnline: false,
-  },
-  {
-    id: 5,
-    username: "artist_emma",
-    displayName: "Emma Wilson",
-    avatar:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
-    verified: false,
-    followers: "3.4K",
-    following: "678",
-    posts: "123",
-    bio: "Digital Artist 🎨 Creating magic pixel by pixel",
-    location: "Los Angeles, CA",
-    mutualFriends: 2,
-    isOnline: true,
-  },
-];
+interface UserCardProps {
+  user: UserProfile;
+  isFollowing: boolean;
+  isLoading: boolean;
+  onFollow: (userId: string) => void;
+}
 
-const SearchUsersPage = () => {
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [followingUsers, setFollowingUsers] = useState(new Set());
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+const UserCard = memo(({ user, isFollowing, isLoading, onFollow }: UserCardProps) => {
+  const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
 
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      setIsLoading(true);
-      // Simulate API call delay
-      const timer = setTimeout(() => {
-        const filtered = mockUsers.filter(
-          (user) =>
-            user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setSearchResults(filtered);
-        setIsLoading(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    } else {
-      setSearchResults([]);
-    }
-  }, [searchQuery]);
-
-  const handleFollow = (userId: number) => {
-    setFollowingUsers((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
-  };
-
-  const UserCard = ({
-    user,
-    isCompact = false,
-  }: {
-    user: UserProfile;
-    isCompact?: boolean;
-  }) => (
+  return (
     <div className="card">
       <div className="user-card-content">
         <div className="user-info-section">
           <div className="avatar-container">
             <img
-              src={user.avatar}
+              src={avatarSrc}
               alt={user.username}
               className="user-avatar-large"
+              onError={() => setAvatarSrc("/default-avatar.png")}
+              loading="lazy"
             />
-            {user.isOnline && <div className="online-indicator"></div>}
           </div>
 
           <div className="user-details">
             <div className="user-name-row">
               <h3 className="user-display-name">{user.displayName}</h3>
-              {user.verified && (
-                <Verified className="verified-icon" size={16} />
-              )}
             </div>
             <p className="username-text">@{user.username}</p>
+            {user.bio && <p className="user-bio">{user.bio}</p>}
 
-            {!isCompact && (
-              <>
-                <p className="user-bio">{user.bio}</p>
-
-                <div className="user-stats">
-                  <span className="stat-item">
-                    <Users2 size={12} className="stat-icon" />
-                    {user.followers} followers
-                  </span>
-                  <span>{user.posts} posts</span>
-                  {user.mutualFriends > 0 && (
-                    <span className="mutual-friends">
-                      {user.mutualFriends} mutual friends
-                    </span>
-                  )}
-                </div>
-
-                {user.location && (
-                  <div className="location-info">
-                    <MapPin size={12} className="location-icon" />
-                    {user.location}
-                  </div>
-                )}
-              </>
-            )}
+            <div className="user-stats">
+              <span className="stat-item">
+                <Users2 size={12} className="stat-icon" />
+                {user.followersCount?.toLocaleString() || 0} followers
+              </span>
+              <span className="stat-item">
+                {user.postsCount?.toLocaleString() || 0} posts
+              </span>
+            </div>
           </div>
         </div>
 
         <button
-          onClick={() => handleFollow(user.id)}
-          className={`follow-btn ${
-            followingUsers.has(user.id)
-              ? "follow-btn-following"
-              : "follow-btn-follow"
-          }`}
+          onClick={() => onFollow(user.id)}
+          className={`follow-btn ${isFollowing ? "follow-btn-following" : "follow-btn-follow"}`}
+          disabled={isLoading}
+          aria-label={isFollowing ? `Unfollow ${user.username}` : `Follow ${user.username}`}
         >
-          {followingUsers.has(user.id) ? (
-            <UserCheck size={16} />
+          {isFollowing ? (
+            <>
+              <UserCheck size={16} />
+              <span>Following</span>
+            </>
           ) : (
-            <UserPlus size={16} />
+            <>
+              <UserPlus size={16} />
+              <span>Follow</span>
+            </>
           )}
-          {followingUsers.has(user.id) ? "Following" : "Follow"}
         </button>
       </div>
     </div>
   );
+});
+
+const SearchUsersPage = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const previousQueryRef = useRef("");
+  const debounceTimerRef = useRef<NodeJS.Timeout>();
+
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      previousQueryRef.current = "";
+      return;
+    }
+
+    if (query === previousQueryRef.current) return;
+    previousQueryRef.current = query;
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const results = await userSearchService.searchUsers(query);
+      setSearchResults(results);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to search users");
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    debounceTimerRef.current = setTimeout(() => {
+      searchUsers(searchQuery);
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchQuery, searchUsers]);
+
+  const handleFollow = useCallback(async (userId: string) => {
+    const isCurrentlyFollowing = followingUsers.has(userId);
+    
+    try {
+      // Optimistic update
+      setFollowingUsers(prev => {
+        const newSet = new Set(prev);
+        isCurrentlyFollowing ? newSet.delete(userId) : newSet.add(userId);
+        return newSet;
+      });
+
+      if (isCurrentlyFollowing) {
+        await userSearchService.unfollowUser(userId);
+      } else {
+        await userSearchService.followUser(userId);
+      }
+    } catch (err) {
+      // Revert on error
+      setFollowingUsers(prev => {
+        const newSet = new Set(prev);
+        isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
+        return newSet;
+      });
+      setError(`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`);
+    }
+  }, [followingUsers]);
 
   return (
     <div className="page-container">
       <div className="container">
-        {/* Header */}
-        <div className="header">
+        <header className="header">
           <div>
             <h1>Discover People</h1>
             <p>Find and connect with amazing people</p>
@@ -214,9 +154,8 @@ const SearchUsersPage = () => {
             <div className="user-avatar">U</div>
             <span className="username">@username</span>
           </div>
-        </div>
+        </header>
 
-        {/* Search Bar */}
         <div className="search-container">
           <div className="search-wrapper">
             <Search className="search-icon" size={20} />
@@ -226,22 +165,23 @@ const SearchUsersPage = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search users by name or username..."
               className="search-input"
+              aria-label="Search users"
+              enterKeyHint="search"
             />
           </div>
         </div>
 
-        {/* Search Results */}
+        {error && <div className="error-message">{error}</div>}
+
         {searchQuery && (
-          <div className="mb-8">
+          <section className="mb-8">
             <h2 className="section-title mb-4">
-              {isLoading
-                ? "Searching..."
-                : `Search Results (${searchResults.length})`}
+              {isLoading ? "Searching..." : `Results (${searchResults.length})`}
             </h2>
 
             {isLoading ? (
               <div className="results-list">
-                {[1, 2, 3].map((i) => (
+                {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="card">
                     <div className="skeleton-container">
                       <div className="skeleton skeleton-avatar"></div>
@@ -258,7 +198,12 @@ const SearchUsersPage = () => {
               <div className="results-list">
                 {searchResults.map((user) => (
                   <div key={user.id} className="clickable">
-                    <UserCard user={user} />
+                    <UserCard
+                      user={user}
+                      isFollowing={followingUsers.has(user.id)}
+                      isLoading={isLoading}
+                      onFollow={handleFollow}
+                    />
                   </div>
                 ))}
               </div>
@@ -269,11 +214,11 @@ const SearchUsersPage = () => {
                 </div>
                 <p className="empty-title">No users found</p>
                 <p className="empty-description">
-                  Try searching with different keywords
+                  Try different search terms
                 </p>
               </div>
             )}
-          </div>
+          </section>
         )}
       </div>
     </div>
