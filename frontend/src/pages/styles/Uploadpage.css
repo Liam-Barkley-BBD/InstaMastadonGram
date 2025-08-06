@@ -1,0 +1,588 @@
+.upload-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #4b0082, #00008b, #4b0082);
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.upload-container {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.upload-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.upload-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.upload-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.upload-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(to right, orange, pink);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: white;
+  font-size: 0.875rem;
+}
+
+.upload-avatar.small {
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+}
+
+.upload-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.upload-left,
+.upload-right {
+  flex: 1;
+  min-width: 0;
+}
+
+.upload-box {
+  background-color: rgba(30, 30, 30, 0.7);
+  border: 1px solid rgba(120, 120, 120, 0.5);
+  border-radius: 0.875rem;
+  padding: 1.25rem;
+  color: white;
+}
+
+.upload-box h2,
+.upload-box h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+}
+
+.upload-dropzone {
+  border: 2px dashed gray;
+  border-radius: 0.875rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dropzone-icon {
+  background-color: rgba(128, 0, 128, 0.2);
+  padding: 0.875rem;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.dropzone-title {
+  font-weight: bold;
+  color: white;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.dropzone-subtitle {
+  font-size: 0.75rem;
+  color: lightgray;
+}
+
+.upload-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.75rem;
+}
+
+.upload-preview-item {
+  position: relative;
+}
+
+.preview-media {
+  aspect-ratio: 1 / 1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #222;
+}
+
+.preview-media img,
+.preview-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.media-icon {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 2px;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.75rem;
+}
+
+.upload-more {
+  aspect-ratio: 1 / 1;
+  border: 2px dashed gray;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.5rem;
+}
+
+.caption-box label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.caption-box textarea {
+  width: 100%;
+  padding: 0.875rem;
+  background-color: #333;
+  border: 1px solid gray;
+  border-radius: 0.875rem;
+  color: white;
+  resize: none;
+  min-height: 100px;
+  font-size: 0.875rem;
+}
+
+.caption-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  color: lightgray;
+  font-size: 0.75rem;
+}
+
+.share-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(to right, purple, pink);
+  border: none;
+  border-radius: 0.875rem;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.share-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-post {
+  background-color: #222;
+  border-radius: 0.875rem;
+  padding: 1rem;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.preview-header p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.location {
+  font-size: 0.625rem;
+  color: gray;
+}
+
+@media (min-width: 480px) {
+  .upload-page {
+    padding: 1.25rem;
+  }
+
+  .upload-header {
+    margin-bottom: 2rem;
+  }
+
+  .upload-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .upload-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+
+  .upload-avatar.small {
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+
+  .upload-grid {
+    gap: 2rem;
+  }
+
+  .upload-box {
+    padding: 1.5rem;
+    border-radius: 1rem;
+  }
+
+  .upload-box h2,
+  .upload-box h3 {
+    font-size: 1.25rem;
+  }
+
+  .upload-dropzone {
+    padding: 2.5rem 2rem;
+    border-radius: 1rem;
+  }
+
+  .dropzone-icon {
+    padding: 1rem;
+    font-size: 1.75rem;
+  }
+
+  .dropzone-title {
+    font-size: 1.125rem;
+  }
+
+  .dropzone-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .upload-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+  }
+
+  .remove-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 0.8rem;
+  }
+
+  .caption-box textarea {
+    padding: 1rem;
+    min-height: 120px;
+    font-size: 0.95rem;
+  }
+
+  .share-btn {
+    padding: 0.875rem 1.25rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .upload-page {
+    padding: 1.5rem;
+  }
+
+  .upload-container {
+    max-width: 800px;
+  }
+
+  .upload-header h1 {
+    font-size: 2rem;
+  }
+
+  .upload-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .upload-avatar.small {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .upload-grid {
+    flex-direction: row;
+    gap: 2.5rem;
+  }
+
+  .upload-left,
+  .upload-right {
+    min-width: 300px;
+  }
+
+  .upload-box {
+    padding: 2rem;
+    border-radius: 1.25rem;
+  }
+
+  .upload-box h2,
+  .upload-box h3 {
+    font-size: 1.375rem;
+  }
+
+  .upload-dropzone {
+    padding: 3rem 2.5rem;
+    border-radius: 1.25rem;
+  }
+
+  .dropzone-icon {
+    padding: 1.25rem;
+    font-size: 2rem;
+  }
+
+  .dropzone-title {
+    font-size: 1.25rem;
+  }
+
+  .dropzone-subtitle {
+    font-size: 0.875rem;
+  }
+
+  .upload-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .caption-box textarea {
+    padding: 1.25rem;
+    min-height: 140px;
+    font-size: 1rem;
+  }
+
+  .share-btn {
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .preview-post {
+    padding: 1.25rem;
+    border-radius: 1rem;
+  }
+
+  .preview-header p {
+    font-size: 1rem;
+  }
+
+  .location {
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .upload-page {
+    padding: 2rem;
+  }
+
+  .upload-container {
+    max-width: 1000px;
+  }
+
+  .upload-header h1 {
+    font-size: 2.25rem;
+  }
+
+  .upload-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  .upload-avatar.small {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+
+  .upload-grid {
+    gap: 3rem;
+  }
+
+  .upload-box {
+    padding: 2.5rem;
+    border-radius: 1.5rem;
+  }
+
+  .upload-box h2,
+  .upload-box h3 {
+    font-size: 1.5rem;
+  }
+
+  .upload-dropzone {
+    padding: 3.5rem 3rem;
+    border-radius: 1.5rem;
+  }
+
+  .dropzone-icon {
+    padding: 1.5rem;
+    font-size: 2.25rem;
+  }
+
+  .dropzone-title {
+    font-size: 1.375rem;
+  }
+
+  .dropzone-subtitle {
+    font-size: 1rem;
+  }
+
+  .upload-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .caption-box textarea {
+    padding: 1.5rem;
+    min-height: 160px;
+    font-size: 1.1rem;
+  }
+
+  .share-btn {
+    padding: 1.125rem 1.75rem;
+    font-size: 1.1rem;
+  }
+
+  .preview-post {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+  }
+
+  .preview-header p {
+    font-size: 1.125rem;
+  }
+
+  .location {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .upload-container {
+    max-width: 1200px;
+  }
+
+  .upload-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .upload-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+
+  .upload-avatar.small {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .upload-grid {
+    gap: 3.5rem;
+  }
+
+  .upload-box {
+    padding: 3rem;
+    border-radius: 1.75rem;
+  }
+
+  .upload-box h2,
+  .upload-box h3 {
+    font-size: 1.625rem;
+  }
+
+  .upload-dropzone {
+    padding: 4rem 3.5rem;
+    border-radius: 1.75rem;
+  }
+
+  .dropzone-icon {
+    padding: 1.75rem;
+    font-size: 2.5rem;
+  }
+
+  .dropzone-title {
+    font-size: 1.5rem;
+  }
+
+  .dropzone-subtitle {
+    font-size: 1.125rem;
+  }
+
+  .upload-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.75rem;
+  }
+
+  .caption-box textarea {
+    padding: 1.75rem;
+    min-height: 180px;
+    font-size: 1.2rem;
+  }
+
+  .share-btn {
+    padding: 1.25rem 2rem;
+    font-size: 1.2rem;
+  }
+
+  .preview-post {
+    padding: 1.75rem;
+    border-radius: 1.5rem;
+  }
+
+  .preview-header p {
+    font-size: 1.25rem;
+  }
+
+  .location {
+    font-size: 1rem;
+  }
+}

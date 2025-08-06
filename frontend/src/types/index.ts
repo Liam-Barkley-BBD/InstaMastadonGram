@@ -3,14 +3,10 @@ export type UserProfile = {
   username: string;
   displayName: string;
   avatar: string;
-  verified: boolean;
   followers: string;
   following: string;
   posts: string;
   bio: string;
-  location: string;
-  mutualFriends: number;
-  isOnline: boolean;
 };
 
 
