@@ -7,10 +7,12 @@ import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
 import './App.css';
 import useAuth from "./services/user.service";
+import { FedifyHandler } from "./fedify/fedify";
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const fedify = new FedifyHandler()
   const { user, authLoading } = useAuth();
 
   const sidebarItems = [
@@ -54,10 +56,9 @@ function App() {
 
         <footer className="beegram-profile">
           <section className="beegram-profile-card">
-            <span className="beegram-avatar">DB</span>
             <article>
-              <h2 className="beegram-username">Darlene Beats</h2>
-              <p className="beegram-handle">@darlene_beats</p>
+              <h2 className="beegram-username">{fedify.extractUsername(user?.handle)}</h2>
+              <p className="beegram-handle">{user?.handle}</p>
             </article>
           </section>
         </footer>
@@ -72,7 +73,7 @@ function App() {
         <div className="main-content-inner">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/me" element={<ProfilePage />} />
+            <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)}/>} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
           </Routes>
