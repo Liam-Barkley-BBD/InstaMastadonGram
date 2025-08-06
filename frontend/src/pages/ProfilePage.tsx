@@ -6,6 +6,7 @@ import useAuth from '../services/user.service';
 
 interface Props {
   handle: string;
+  isProfileTab:boolean;
 }
 
 interface User {
@@ -52,7 +53,7 @@ interface UserProfile {
   postsCount: number;
 }
 
-const ProfilePage = ({ handle }: Props) => {
+const ProfilePage = ({ handle, isProfileTab }: Props) => {
   const { user } = useAuth();
   const isViewingOwnProfile = isCurrentUser(user?.handle);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -70,6 +71,8 @@ const ProfilePage = ({ handle }: Props) => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    alert("isProfileTab:"+ isProfileTab); // should log false
+
     const fetchProfile = async () => {
       try {
         setLoading(true);
@@ -356,11 +359,12 @@ const ProfilePage = ({ handle }: Props) => {
     <>
       <div className="main-content-inner profile-container">
         <main className="profile-page">
+          {isProfileTab &&
           <header className="profile-header">
             <button className="back-button">‹</button>
             <h2>{profile.username}</h2>
             <button className="menu-button">⋯</button>
-          </header>
+          </header>}
 
           <article className="profile-content">
             <section className="profile-info">
