@@ -62,6 +62,29 @@ class UserSearchService {
     }
   }
 
+  async getRecentSearches(handle:string): Promise<{ recent_searches: string[], count: number }> {
+    try {
+      const response = await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/search/recent?handle=${handle}`, {
+        method: 'GET'
+      }, 0, false);
+      return response;
+    } catch (error) {
+      console.error("Failed to get recent searches:", error);
+      throw new Error("Failed to load recent searches. Please try again.");
+    }
+  }
+
+  async clearRecentSearches(handle:string): Promise<void> {
+    try {
+      await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/search/recent?handle=${handle}`, {
+        method: 'DELETE'
+      }, 0, false);
+    } catch (error) {
+      console.error("Failed to clear recent searches:", error);
+      throw new Error("Failed to clear recent searches. Please try again.");
+    }
+  }
+
   async unfollowUser(userId: string): Promise<void> {
     try {
       // TODO: Implement the actual unfollow API call
