@@ -12,17 +12,21 @@ export default function useAuth() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      let res;
       try {
-        const res = await fetch(`${backendUrl}/api/users/me`, {
+        const user = getUserFromLocalStorage();
+        if(!user) {
+          res = await fetch(`${backendUrl}/api/users/me`, {
           method: 'GET',
           credentials: 'include',
         });
-
-        if (res.ok) {
+}
+        if (res && res.ok) {
           const data = await res.json();
           setUser(data);
+          localStorage.setItem("user", JSON.stringify(data));
         } else {
-          setUser(null);
+          setUser(user);
         }
       } catch (err) {
         console.error('Auth check failed:', err);
@@ -34,6 +38,20 @@ export default function useAuth() {
 
     fetchUser();
   }, []);
+
+  const getUserFromLocalStorage = (): AuthenticatedUser | null => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        return JSON.parse(user);
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+        return null;
+      }
+    }
+    return null;
+  }
+
 
   return { user, authLoading };
 }
