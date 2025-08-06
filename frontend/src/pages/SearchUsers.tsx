@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
-import { Search, UserPlus, UserCheck, MapPin, Users2 } from "lucide-react";
+import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
 import type { UserProfile } from "../types";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
