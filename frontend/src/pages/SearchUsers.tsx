@@ -167,8 +167,9 @@ const SearchUsersPage = () => {
     return (
       <div className="profile-view-container">
         <button className="back-to-list-btn" onClick={handleBackToList}>
-          ← Back to list
-        </button>
+  <span className="back-arrow">←</span>
+  Back to list
+</button>
         <ProfilePage handle={viewingProfile} isProfileTab = {false}/>
       </div>
     );
