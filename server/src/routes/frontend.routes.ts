@@ -20,10 +20,10 @@ const makeActivityPubRequest = async (url:any) => {
 };
 
 // Get user profile
-router.get('/profile/:handle', async (req, res) => {
+router.get('/profile', async (req, res) => {
     try {
-        const { handle } = req.params;
-        const profileData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}`);
+        const { handle, uri } = req.query;
+        const profileData = await makeActivityPubRequest(uri??`https://mastodon.social/users/${handle}`);
         res.json(profileData);
     } catch (error) {
         console.error('Error fetching profile:', error);
@@ -32,13 +32,13 @@ router.get('/profile/:handle', async (req, res) => {
 });
 
 // Get user followers
-router.get('/followers/:handle', async (req, res) => {
+router.get('/followers', async (req, res) => {
      try {
-        const { handle } = req.params;
+        const { handle, uri } = req.query;
         const maxPages = parseInt(req.query.maxPages as string) || 5; // Allow limiting pages
         
         const followersData = await getAllPaginatedItems(
-            `https://mastodon.social/users/${handle}/followers`,
+            uri??`https://mastodon.social/users/${handle}/followers`,
             maxPages
         );
         
@@ -50,13 +50,13 @@ router.get('/followers/:handle', async (req, res) => {
 });
 
 // Get user following
-router.get('/following/:handle', async (req, res) => {
+router.get('/following', async (req, res) => {
      try {
-        const { handle } = req.params;
+        const { handle, uri } = req.query;
         const maxPages = parseInt(req.query.maxPages as string) || 5; // Allow limiting pages
         
         const followingData = await getAllPaginatedItems(
-            `https://mastodon.social/users/${handle}/following`,
+            uri??`https://mastodon.social/users/${handle}/following`,
             maxPages
         );
         
@@ -68,10 +68,10 @@ router.get('/following/:handle', async (req, res) => {
 });
 
 // Get user posts
-router.get('/posts/:handle', async (req, res) => {
+router.get('/posts', async (req, res) => {
     try {
-        const { handle } = req.params;
-        const postsData = await makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox?page=true`);
+        const { handle, uri } = req.query;
+        const postsData = await makeActivityPubRequest(uri??`https://mastodon.social/users/${handle}/outbox?page=true`);
         res.json(postsData);
     } catch (error) {
         console.error('Error fetching posts:', error);
@@ -79,15 +79,15 @@ router.get('/posts/:handle', async (req, res) => {
     }
 });
 
-router.get('/profile/:handle/counts', async (req, res) => {
+router.get('/profile/counts', async (req, res) => {
     try {
-        const { handle } = req.params;
+        const { handle, followerUrl, followingUrl, outboxUrl } = req.query;
         
         // Fetch all count endpoints in parallel
         const [followersResponse, followingResponse, postsResponse] = await Promise.allSettled([
-            makeActivityPubRequest(`https://mastodon.social/users/${handle}/followers`),
-            makeActivityPubRequest(`https://mastodon.social/users/${handle}/following`),
-            makeActivityPubRequest(`https://mastodon.social/users/${handle}/outbox`)
+            makeActivityPubRequest(followerUrl??`https://mastodon.social/users/${handle}/followers`),
+            makeActivityPubRequest(followingUrl??`https://mastodon.social/users/${handle}/following`),
+            makeActivityPubRequest(outboxUrl??`https://mastodon.social/users/${handle}/outbox`)
         ]);
         
         const counts = {
