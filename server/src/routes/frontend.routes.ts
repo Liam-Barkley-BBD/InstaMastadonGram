@@ -75,7 +75,7 @@ router.get('/posts', async (req, res) => {
         res.json(postsData);
     } catch (error) {
         console.error('Error fetching posts:', error);
-        res.status(500).json({ error: error });
+        res.status(500).json({ error: error.message });
     }
 });
 
