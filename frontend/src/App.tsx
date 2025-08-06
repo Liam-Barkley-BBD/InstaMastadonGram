@@ -73,7 +73,7 @@ function App() {
         <div className="main-content-inner">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)}/>} />
+            <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)} isProfileTab = {true}/>} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
           </Routes>
