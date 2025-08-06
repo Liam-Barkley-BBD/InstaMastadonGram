@@ -71,7 +71,6 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    alert("isProfileTab:"+ isProfileTab); // should log false
 
     const fetchProfile = async () => {
       try {
@@ -79,7 +78,6 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
         setError(null);
 
         const profileData: UserProfile = await fedifyHandler.current.getProfile(handle);
-        console.log('Fetched profile data:', profileData);
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
