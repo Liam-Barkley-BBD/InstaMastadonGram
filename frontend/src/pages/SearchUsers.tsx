@@ -4,6 +4,7 @@ import type { UserProfile } from "../types";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 import ProfilePage from "./ProfilePage";
+import useAuth from "../services/user.service";
 
 interface UserCardProps {
   user: UserProfile;
@@ -82,6 +83,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
 });
 
 const SearchUsersPage = () => {
+  const [recentSearches, setRecentSearches] = useState<any[]>()
   const [viewingProfile, setViewingProfile] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -90,6 +92,19 @@ const SearchUsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
   const debounceTimerRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+  const loadRecentSearches = async () => {
+    try {
+      const recent = await userSearchService.getRecentSearches(useAuth().user.handle);
+      setRecentSearches(recent.recent_searches.map(item => item.query || item)); // Handle both string and object formats
+    } catch (error) {
+      console.warn('Failed to load recent searches:', error);
+    }
+  };
+
+  loadRecentSearches();
+}, []);
 
   const handleUserClick = (userId: string) => {
     const user = searchResults.find(u => u.id === userId);
@@ -175,6 +190,8 @@ const SearchUsersPage = () => {
     );
   }
 
+  
+
   return (
     <div className="page-container">
       <div className="container">
@@ -205,6 +222,55 @@ const SearchUsersPage = () => {
         </div>
 
         {error && <div className="error-message">{error}</div>}
+
+        {/* Recent Searches Section - Show when no search query */}
+{!searchQuery && recentSearches?.length > 0 && (
+  <section className="mb-8">
+    <div className="recent-searches-header">
+      <h2 className="section-title mb-4">
+        <Clock size={18} className="inline mr-2" />
+        Recent searches
+      </h2>
+      <button onClick={clearRecentSearches} className="clear-all-btn">
+        Clear all
+      </button>
+    </div>
+    
+    <div className="results-list">
+      {recentSearches.map((query, index) => (
+        <div key={index} className="card clickable recent-search-card" onClick={() => handleRecentSearchClick(query)}>
+          <div className="user-card-content">
+            <div className="user-info-section">
+              <div className="avatar-container">
+                <div className="recent-search-avatar">
+                  <Search size={24} className="search-icon-avatar" />
+                </div>
+              </div>
+              
+              <div className="user-details">
+                <div className="user-name-row">
+                  <h3 className="user-display-name">{query}</h3>
+                </div>
+                <p className="username-text">Recent search</p>
+              </div>
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeRecentSearch(query);
+              }}
+              className="remove-search-btn"
+              aria-label={`Remove ${query} from recent searches`}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
 
         {searchQuery && (
           <section className="mb-8">
