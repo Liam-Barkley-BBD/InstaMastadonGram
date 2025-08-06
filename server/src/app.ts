@@ -9,6 +9,7 @@ import "./config/passport";
 import dotenv from "dotenv";
 import MongoStore from "connect-mongo";
 import userRoutes from "./routes/users.routes.ts"
+
 import frontendRouter from "./routes/frontend.routes.ts";
 import searchRouter from "./routes/search.routes.ts"
 import cors from "cors"
@@ -22,7 +23,10 @@ app.set("trust proxy", true);
 app.use(integrateFederation(federation, (req) => undefined));
 
 app.use(express.json());
-app.use(cors())
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}))
 app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
@@ -35,8 +39,11 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes)
 app.use("/api/frontend", frontendRouter);
 app.use("/api/search", searchRouter);

@@ -1,4 +1,4 @@
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { Home, Search, Plus, User } from 'lucide-react';
 import HomePage from "./pages/HomePage";
 import Login from './pages/LoginPage';
@@ -6,10 +6,12 @@ import ProfilePage from "./pages/ProfilePage";
 import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
 import './App.css';
+import useAuth from "./services/user.service";
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, authLoading } = useAuth();
 
   const sidebarItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/' },
@@ -26,19 +28,10 @@ function App() {
     return location.pathname === path;
   };
 
-  const isLoginPage = location.pathname === '/login';
+  if (authLoading) return <div>Loading...</div>;
 
-  if (isLoginPage) {
-    return (
-      <div className="login-wrapper">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-        </Routes>
-      </div>
-    );
-  }
-
-  return (
+  return user?.handle 
+  ? (
     <div className="app-container">
       {/* Sidebar */}
       <aside className="beegram-sidebar">
@@ -82,7 +75,6 @@ function App() {
             <Route path="/me" element={<ProfilePage />} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
-            <Route path="/login" element={<Login />} />
           </Routes>
         </div>
       </main>
@@ -101,7 +93,15 @@ function App() {
         ))}
       </nav>
     </div>
-  );
+  )
+  : (
+      <div className="login-wrapper">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    );;
 }
 
 export default App;

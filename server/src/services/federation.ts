@@ -1,4 +1,4 @@
-import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient } from "@fedify/fedify";
+import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient, isActor } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
@@ -28,6 +28,7 @@ federation
     else console.log("Found user!")
 
     const keys = await ctx.getActorKeyPairs(identifier);
+
     return new Person({
       id: ctx.getActorUri(identifier),
       preferredUsername: identifier,
@@ -40,6 +41,7 @@ federation
         sharedInbox: ctx.getInboxUri(),
       }),
       followers: ctx.getFollowersUri(identifier),
+      following: ctx.getFollowingUri(identifier),
     });
   })
 
@@ -55,18 +57,24 @@ federation
     const keyPairs = [];
 
     if (actor.keys?.rsa) {
-      keyPairs.push({
-        publicKey: await importJwk(actor.keys.rsa.publicKey, "public"),
-        privateKey: await importJwk(actor.keys.rsa.privateKey, "private"),
-      });
+    try {
+      const pub = await importJwk(actor.keys.rsa.publicKey, "public");
+      const priv = await importJwk(actor.keys.rsa.privateKey, "private");
+      keyPairs.push({ publicKey: pub, privateKey: priv });
+    } catch (e) {
+      console.error("RSA import failed:", e);
     }
-
-    if (actor.keys?.ed25519) {
-      keyPairs.push({
-        publicKey: await importJwk(actor.keys.ed25519.publicKey, "public"),
-        privateKey: await importJwk(actor.keys.ed25519.privateKey, "private"),
-      });
+  }
+  
+  if (actor.keys?.ed25519) {
+    try {
+      const pub = await importJwk(actor.keys.ed25519.publicKey, "public");
+      const priv = await importJwk(actor.keys.ed25519.privateKey, "private");
+      keyPairs.push({ publicKey: pub, privateKey: priv });
+    } catch (e) {
+      console.error("Ed25519 import failed:", e);
     }
+  }
 
     return keyPairs;
   });
@@ -198,6 +206,57 @@ federation
     const recipient = to.identifier;
     // Do something with the recipient
     console.log(`Received Create Activity from recipient: ${recipient}`);
+  })
+
+  .on(Accept, async (ctx, accept) => {
+    const follow = await accept.getObject();
+    if (!(follow instanceof Follow)) return;
+
+    const following: Person = (await accept.getActor()) as Person;
+    if (!isActor(following)) return;
+
+    const follower = follow.actorId;
+    if (follower == null) return;
+
+    const parsed = ctx.parseUri(follower);
+    if (parsed == null || parsed.type !== "actor") return;
+    
+    const followingHandle = await getActorHandle(following);
+    const followingActor = await Actor.findOneAndUpdate(
+      { uri: following.id },
+      {
+        uri: following.id,
+        handle: followingHandle,
+        name: following.name?.toString() || followingHandle,
+        inboxUri: following.inboxId,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const followerActor = await Actor.findOne({ handle: parsed.identifier })
+    const existingFollow = await FollowModel.findOne({
+      follower: followerActor?._id,
+      following: followingActor._id,
+    });
+
+    if (!existingFollow) {
+      await FollowModel.create({
+        follower: followerActor?._id,
+        following: followingActor._id,
+      });
+    }
+
+    logger.info(`Stored follow from ${parsed.identifier} to ${followingHandle}`);
+
+    const followId = new mongoose.Types.ObjectId();
+    const followActivity = new ActivityModel({
+      _id: followId,
+      type: "Follow",
+      actor: follower,
+      object: follow,
+      to: following.id,
+    });
+    await followActivity.save();
   })
 
   .onError(async (ctx, error) => {
@@ -364,5 +423,47 @@ federation
     }
   );
 
+federation
+  .setFollowingDispatcher("/users/{identifier}/following", async (ctx, identifier, cursor) => {
+      const PAGE_SIZE = 10;
+      if (cursor == null) return null;
+      
+      const page = parseInt(cursor, 10);
+      if (isNaN(page) || page < 1) return null;
+
+      const followingActor = await Actor.findOne({ handle: identifier });
+      if (!followingActor) return null;
+
+      const skip = (page - 1) * PAGE_SIZE;
+
+      const follows = await FollowModel.find({ follower: followingActor._id })
+        .sort({ _id: -1 })
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .populate<{ following: ActorDoc }>("following");
+
+      const items = follows
+        .filter(f => !!f.following?.uri && !!f.following?.inboxUri)
+        .map(f => new URL(f.following!.uri));
+
+      const totalItems = await FollowModel.countDocuments({ following: followingActor._id });
+      const nextCursor = skip + PAGE_SIZE < totalItems ? String(page + 1) : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }
+  )
+
+  .setFirstCursor(async (ctx, identifier) => "1")
+
+  .setCounter(async (ctx, identifier) => {
+    const followingActor = await Actor.findOne({ handle: identifier });
+    if (!followingActor) return 0;
+
+    const count = await FollowModel.countDocuments({ following: followingActor._id });
+    return count;
+  });
 
 export default federation;

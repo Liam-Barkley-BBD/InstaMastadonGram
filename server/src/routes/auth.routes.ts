@@ -9,7 +9,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     failureRedirect: "/login",
-    successRedirect: "/",
+    successRedirect: process.env.FRONTEND_URI || "http://localhost:5173/",
   })
 );
 
