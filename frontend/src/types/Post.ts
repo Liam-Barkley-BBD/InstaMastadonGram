@@ -1,8 +1,16 @@
 export interface Post {
   id: string;
-  name: string;
-  timestamp: string;
-  avatar: string;
   content: string;
-  description: string;
+  publishedDate: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  actor: {
+    handle: string;
+    name: string;
+    id: string;
+  };
+  url: string;
+  likes: number;
+  replies: number;
+  shares: number;
 }

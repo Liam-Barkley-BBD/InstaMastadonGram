@@ -99,6 +99,181 @@
   flex-wrap: wrap;
 }
 
+.beegram-post-image {
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.beegram-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.beegram-post-video {
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.beegram-video {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #000;
+}
+
+.beegram-link-previews {
+  margin-top: 1rem;
+}
+
+.beegram-link-preview {
+  margin-bottom: 0.75rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.beegram-link-preview:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.beegram-link-preview-content {
+  display: flex;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.75rem;
+}
+
+.beegram-link-preview-image {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  margin-right: 0.75rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.beegram-link-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.beegram-link-preview-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.beegram-link-preview-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: #fbbf24;
+  line-height: 1.3;
+}
+
+.beegram-link-preview-description {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.beegram-link-preview-domain {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+  color: #6b7280;
+}
+
+.beegram-link-preview-skeleton {
+  display: flex;
+  padding: 0.75rem;
+}
+
+.beegram-link-preview-skeleton-image {
+  width: 80px;
+  height: 80px;
+  margin-right: 0.75rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.beegram-link-preview-skeleton-content {
+  flex: 1;
+}
+
+.beegram-link-preview-skeleton-title {
+  height: 1rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.beegram-link-preview-skeleton-description {
+  height: 0.75rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+  width: 80%;
+}
+
+.beegram-link-preview-skeleton-domain {
+  height: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.25rem;
+  width: 60%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .beegram-empty-state {
   display: flex;
   flex-direction: column;
@@ -129,6 +304,46 @@
   color: #c084fc;
   max-width: 20rem;
   margin-bottom: 1rem;
+}
+
+.beegram-loading,
+.beegram-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 15rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.beegram-loading-emoji,
+.beegram-error-emoji {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.beegram-loading p,
+.beegram-error p {
+  font-size: 0.875rem;
+  color: #c084fc;
+  margin-bottom: 1rem;
+}
+
+.beegram-retry-btn {
+  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.beegram-retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 146, 60, 0.3);
 }
 
 @media (min-width: 640px) {
@@ -184,6 +399,21 @@
     font-size: 1rem;
     max-width: 24rem;
   }
+
+  .beegram-loading,
+  .beegram-error {
+    height: 18rem;
+  }
+
+  .beegram-loading-emoji,
+  .beegram-error-emoji {
+    font-size: 3rem;
+  }
+
+  .beegram-loading p,
+  .beegram-error p {
+    font-size: 1rem;
+  }
 }
 
 @media (min-width: 769px) {
@@ -235,6 +465,21 @@
   .beegram-empty-text {
     font-size: 1.25rem;
     max-width: 28rem;
+  }
+
+  .beegram-loading,
+  .beegram-error {
+    height: 20rem;
+  }
+
+  .beegram-loading-emoji,
+  .beegram-error-emoji {
+    font-size: 5rem;
+  }
+
+  .beegram-loading p,
+  .beegram-error p {
+    font-size: 1.25rem;
   }
 }
 

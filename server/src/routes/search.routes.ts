@@ -2,6 +2,7 @@ import { Router } from "express";
 import Actor from "../models/actor.model.ts";
 import type { ActorDoc } from "../models/actor.model.ts";
 import { client } from "../utils/mongo.ts";
+import mongoose from "mongoose";
 
 
 const router = Router();
@@ -66,7 +67,7 @@ const discoverActorViaWebFinger = async (handle: string) => {
         }
 
         return await profileResponse.json();
-    } catch (error) {
+    } catch (error: any) {
         throw new Error(`WebFinger discovery failed: ${error.message}`);
     }
 };
@@ -151,7 +152,7 @@ router.get('/search/actors', async (req, res) => {
             count: searchResults.length
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error searching actors:', error);
         res.status(500).json({ error: error.message });
     }
@@ -315,7 +316,7 @@ router.get('/actor/:handle', async (req, res) => {
             res.status(404).json({ error: 'Actor not found' });
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching actor:', error);
         res.status(500).json({ error: error.message });
     }
