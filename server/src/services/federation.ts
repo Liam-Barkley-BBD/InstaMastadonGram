@@ -158,7 +158,7 @@ federation
       _id: acceptId,
       type: "Accept",
       actor: follow.objectId.href,
-      object: follow,
+      object: JSON.parse(JSON.stringify(follow)),
       to: follow.actorId?.href,
     });
     await acceptActivity.save();
@@ -253,7 +253,7 @@ federation
       _id: followId,
       type: "Follow",
       actor: follower,
-      object: follow,
+      object: JSON.parse(JSON.stringify(follow)),
       to: following.id,
     });
     await followActivity.save();
