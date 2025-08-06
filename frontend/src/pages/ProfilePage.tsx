@@ -1,6 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
+import { isCurrentUser } from '../services/user.service';
+import useAuth from '../services/user.service';
+
+interface Props {
+  handle: string;
+}
 
 interface User {
   id: string;
@@ -45,7 +51,9 @@ interface UserProfile {
   postsCount: number;
 }
 
-const ProfilePage = () => {
+const ProfilePage = ({ handle }: Props) => {
+  const { user } = useAuth();
+  const isViewingOwnProfile = isCurrentUser(user?.handle); // <-- renamed
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,18 +66,19 @@ const ProfilePage = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // Initial profile load
+
   useEffect(() => {
+    
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const profileData: UserProfile = await fedifyHandler.current.getProfile(
-          "CatsOfYore"
-        );
+        setError(null);
+
+        const profileData: UserProfile = await fedifyHandler.current.getProfile(handle);
         console.log('Fetched profile data:', profileData);
         setProfile(profileData);
         setPosts(profileData.posts || []);
-        setHasMorePosts(profileData.posts?.length === 20); // If we got 20 posts, there might be more
+        setHasMorePosts(profileData.posts?.length === 20);
         setCurrentPage(1);
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -80,9 +89,8 @@ const ProfilePage = () => {
     };
 
     fetchProfile();
-  }, []);
+  }, [handle]);
 
-  // Load more posts function
   const loadMorePosts = useCallback(async () => {
     if (!profile || loadingMorePosts || !hasMorePosts) return;
 
@@ -90,8 +98,8 @@ const ProfilePage = () => {
       setLoadingMorePosts(true);
       const nextPage = currentPage + 1;
       const morePostsData = await fedifyHandler.current.getPostsPaginated(
-        profile.username, 
-        nextPage, 
+        profile.username,
+        nextPage,
         20
       );
 
@@ -109,7 +117,6 @@ const ProfilePage = () => {
     }
   }, [profile, currentPage, loadingMorePosts, hasMorePosts]);
 
-  // Intersection Observer for infinite scroll
   useEffect(() => {
     if (!hasMorePosts || loadingMorePosts) return;
 
@@ -189,11 +196,9 @@ const ProfilePage = () => {
               <figure className="profile-avatar">
                 <div className="skeleton skeleton-avatar"></div>
               </figure>
-                       
               <div className="profile-details">
                 <div className="skeleton skeleton-text skeleton-display-name"></div>
                 <div className="skeleton skeleton-text skeleton-handle"></div>
-                               
                 <div className="stats">
                   <div className="stat">
                     <div className="skeleton skeleton-text skeleton-stat-number"></div>
@@ -208,12 +213,10 @@ const ProfilePage = () => {
                     <span>Following</span>
                   </div>
                 </div>
-                               
                 <div className="bio">
                   <div className="skeleton skeleton-text skeleton-bio-line"></div>
                   <div className="skeleton skeleton-text skeleton-bio-line skeleton-bio-short"></div>
                 </div>
-                               
                 <div className="actions">
                   <div className="skeleton skeleton-button"></div>
                 </div>
@@ -253,17 +256,15 @@ const ProfilePage = () => {
         <article className="profile-content">
           <section className="profile-info">
             <figure className="profile-avatar">
-          {profile.avatar? (
-            <img src={profile.avatar} alt="Profile Avatar" className="avatar-large" />
-          ) : (
-            <span className="avatar-large" />
-          )}
-        </figure>
-                     
+              {profile.avatar ? (
+                <img src={profile.avatar} alt="Profile Avatar" className="avatar-large" />
+              ) : (
+                <span className="avatar-large" />
+              )}
+            </figure>
             <div className="profile-details">
               <h1>{profile.displayName || profile.username}</h1>
               <p className="username">@{profile.username}</p>
-                             
               <div className="stats">
                 <div className="stat">
                   <strong>{profile.postsCount}</strong>
@@ -278,17 +279,11 @@ const ProfilePage = () => {
                   <span>Following</span>
                 </div>
               </div>
-                             
               <div className="bio">
-                {profile.bio ? (
-                  <p>{profile.bio}</p>
-                ) : (
-                  <p>No bio available</p>
-                )}
+                {profile.bio ? <p>{profile.bio}</p> : <p>No bio available</p>}
               </div>
-                             
               <div className="actions">
-                <button className="follow-button">Follow</button>
+                {!isViewingOwnProfile && <button className="follow-button">Follow</button>}
               </div>
             </div>
           </section>
@@ -306,14 +301,11 @@ const ProfilePage = () => {
                         </span>
                         <div className="post-stats">
                           <span>♥ {post.likes}</span>
-
                         </div>
                       </div>
                     </article>
                   ))}
                 </div>
-                
-                {/* Intersection observer target for infinite scroll */}
                 {hasMorePosts && (
                   <div ref={loadMoreRef} className="load-more-trigger">
                     {loadingMorePosts && (
@@ -327,7 +319,6 @@ const ProfilePage = () => {
                     )}
                   </div>
                 )}
-                
                 {!hasMorePosts && posts.length > 0 && (
                   <div className="end-of-posts">
                     <p>You've reached the end!</p>
