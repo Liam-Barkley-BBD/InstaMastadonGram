@@ -1,10 +1,76 @@
 import { Router } from "express";
 import Actor from "../models/actor.model.ts";
 import type { ActorDoc } from "../models/actor.model.ts";
-import { client } from "../utils/mongo.ts";
-
+import { client as mongoClient } from "../utils/mongo.ts";
+import { redisClient } from "../utils/redis.ts"; // We'll create this
+import mongoose from "mongoose";
 
 const router = Router();
+
+// Recent searches configuration
+const RECENT_SEARCHES_CONFIG = {
+    MAX_SEARCHES: 10,
+    KEY_PREFIX: 'recent_searches:'
+};
+
+// Helper function to get user's recent searches key
+const getUserRecentSearchesKey = (userId: string) => {
+    return `${RECENT_SEARCHES_CONFIG.KEY_PREFIX}${userId}`;
+};
+
+// Helper function to safely use Redis (with fallback)
+const safeRedisOperation = async <T>(
+    operation: () => Promise<T>,
+    fallback: T
+): Promise<T> => {
+    try {
+        if (!redisClient.isOpen) {
+            return fallback;
+        }
+        return await operation();
+    } catch (error) {
+        console.warn('Redis operation failed, using fallback:', error.message);
+        return fallback;
+    }
+};
+
+// Function to add search query to user's recent searches
+const addToRecentSearches = async (userId: string, query: string) => {
+    const key = getUserRecentSearchesKey(userId);
+    
+    await safeRedisOperation(async () => {
+        // Remove the query if it already exists (to move it to front)
+        await redisClient.lRem(key, 0, query);
+        
+        // Add to the front of the list
+        await redisClient.lPush(key, query);
+        
+        // Keep only the most recent 10 searches
+        await redisClient.lTrim(key, 0, RECENT_SEARCHES_CONFIG.MAX_SEARCHES - 1);
+        
+        return null;
+    }, null);
+};
+
+// Function to get user's recent searches
+const getRecentSearches = async (userId: string): Promise<string[]> => {
+    const key = getUserRecentSearchesKey(userId);
+    
+    return await safeRedisOperation(
+        () => redisClient.lRange(key, 0, RECENT_SEARCHES_CONFIG.MAX_SEARCHES - 1),
+        []
+    );
+};
+
+// Function to clear user's recent searches
+const clearRecentSearches = async (userId: string) => {
+    const key = getUserRecentSearchesKey(userId);
+    
+    await safeRedisOperation(
+        () => redisClient.del(key),
+        null
+    );
+};
 
 // WebFinger discovery function
 const discoverActorViaWebFinger = async (handle: string) => {
@@ -83,16 +149,50 @@ export const findUserByHandle = async (handle: string): Promise<ActorDoc | null>
     }
 };
 
+// Get user's recent searches
+router.get('/search/recent', async (req, res) => {
+    try {
+        const { handle } = req.query; // Assuming you have user authentication middleware
+
+        const recentSearches = await getRecentSearches(handle as string);
+        
+        res.json({
+            recent_searches: recentSearches,
+            count: recentSearches.length
+        });
+
+    } catch (error) {
+        console.error('Error getting recent searches:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Clear user's recent searches
+router.delete('/search/recent', async (req, res) => {
+    try {
+        const {handle} = req.query; // Assuming you have user authentication middleware
+
+        await clearRecentSearches(handle as string);
+        
+        res.json({ message: 'Recent searches cleared' });
+
+    } catch (error) {
+        console.error('Error clearing recent searches:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Fuzzy search endpoint for local actors
 router.get('/search/actors', async (req, res) => {
     try {
         const { q, limit = 10 } = req.query;
+        const {handle} = req.query; // Assuming you have user authentication middleware
 
         if (!q || typeof q !== 'string') {
             return res.status(400).json({ error: 'Query parameter "q" is required' });
         }
 
-        await client.connect();
+        await mongoClient.connect();
 
         // Create text index on handle field if it doesn't exist
         try {
@@ -145,6 +245,10 @@ router.get('/search/actors', async (req, res) => {
             }
         ]);
 
+        if (handle && q.trim().length > 0) {
+            await addToRecentSearches(handle as string, JSON.stringify(searchResults));
+        }
+
         res.json({
             query: q,
             results: searchResults,
@@ -161,6 +265,7 @@ router.get('/search/actors', async (req, res) => {
 router.get('/search/users', async (req, res) => {
     try {
         const { q, includeRemote = 'true' } = req.query;
+        const handle = "liam"; // Assuming you have user authentication middleware
 
         if (!q || typeof q !== 'string') {
             return res.status(400).json({ error: 'Query parameter "q" is required' });
@@ -174,7 +279,7 @@ router.get('/search/users', async (req, res) => {
         };
 
         // First, search local actors
-        await client.connect();
+        await mongoClient.connect();
 
         try {
             await Actor.collection.createIndex({ handle: 'text' });
@@ -259,6 +364,9 @@ router.get('/search/users', async (req, res) => {
         }
 
         results.total = results.local.length + (results.remote ? 1 : 0);
+        console.log("ADDING")
+        await addToRecentSearches(handle as string, JSON.stringify(results));
+        
 
         res.json(results);
 
@@ -317,56 +425,6 @@ router.get('/actor/:handle', async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching actor:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Save discovered remote actor to local database
-router.post('/actor/save', async (req, res) => {
-    try {
-        const { handle } = req.body;
-
-        if (!handle) {
-            return res.status(400).json({ error: 'Handle is required' });
-        }
-
-        // Check if already exists with exact match
-        const existingActor = await findUserByHandle(handle);
-        if (existingActor) {
-            return res.json({ 
-                message: 'Actor already exists locally',
-                actor: existingActor 
-            });
-        }
-
-        // Discover via WebFinger
-        const remoteProfile = await discoverActorViaWebFinger(handle);
-
-        // Create new actor record
-        const newActor = new Actor({
-            userId: remoteProfile.id,
-            uri: remoteProfile.id,
-            handle: remoteProfile.preferredUsername ? 
-                `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` : 
-                handle,
-            inboxUri: remoteProfile.inbox,
-            sharedInboxUri: remoteProfile.sharedInbox,
-            keys: {
-                rsa: {
-                    publicKey: remoteProfile.publicKey
-                }
-            }
-        });
-
-        const savedActor = await newActor.save();
-
-        res.json({
-            message: 'Actor saved successfully',
-            actor: savedActor
-        });
-
-    } catch (error) {
-        console.error('Error saving actor:', error);
         res.status(500).json({ error: error.message });
     }
 });
