@@ -27,7 +27,11 @@ const upload = multer({
 
 // router.use(isAuthenticated);
 
-router.post("/:username", upload.single("media"), async (req, res) => {
+router.post("/:username", (req, res, next) => {
+  console.log("Incoming request before multer");
+  next();
+},  upload.single("media"), async (req, res) => {
+    console.log("Inside route handler after multer");
     const { username } = req.params;
     const { content } = req.body;
 
