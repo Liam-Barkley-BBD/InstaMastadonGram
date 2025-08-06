@@ -101,6 +101,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
       const nextPage = currentPage + 1;
       const morePostsData = await fedifyHandler.current.getPostsPaginated(
         profile.username,
+        undefined,
         nextPage,
         20
       );
