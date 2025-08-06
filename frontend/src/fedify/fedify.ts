@@ -57,7 +57,7 @@ export class FedifyHandler {
 
     EXPRESS_URL = "http://localhost:8000/api/frontend";
 
-    private async makeRequest(
+     async makeRequest(
         url: string,
         options: RequestInit = {},
         retryCount = 0,
@@ -112,6 +112,13 @@ export class FedifyHandler {
             };
         }
     }
+
+     extractUsername(handle: string): string {
+        if (handle.includes('@')) {
+            return handle.split('@')[0];
+        }
+        return handle;
+        }
 
     private extractUsernameFromUrl(url: string): string {
         try {
