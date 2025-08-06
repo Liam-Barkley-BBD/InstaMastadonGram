@@ -37,6 +37,8 @@ interface Post {
     publishedDate: string;
     url: string;
     likes?: number;
+    replies?: number;
+    shares?: number;
 }
 
 interface PaginatedPostsResponse {
@@ -87,6 +89,13 @@ export class FedifyHandler {
             }
             throw error;
         }
+    }
+
+    private buildQueryParams(handle?: string, uri?: string): string {
+        const params = new URLSearchParams();
+        if (handle) params.set('handle', handle);
+        if (uri) params.set('uri', uri);
+        return params.toString() ? `?${params.toString()}` : '';
     }
 
     private async resolveUserFromUrl(userUrl: string): Promise<Follower | Following | null> {
@@ -163,9 +172,20 @@ export class FedifyHandler {
         return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
     };
 
-    // Optimized getProfile - only fetches basic info + counts + first 20 posts
-    getProfile = async (handle: string): Promise<UserProfile> => {
-        const rawProfile = await this.makeRequest(`${this.EXPRESS_URL}/profile/${handle}`, {}, 0, false);
+    // Optimized getProfile - now supports both handle and uri
+    getProfile = async (handle?: string, uri?: string ): Promise<UserProfile> => {
+        if (!handle && !uri) {
+            throw new Error("Either handle or uri must be provided.");
+        }
+
+        const query = this.buildQueryParams(handle, uri);
+
+        const rawProfile = await this.makeRequest(
+            `${this.EXPRESS_URL}/profile${query}`,
+            {},
+            0,
+            false
+        );
         
         const profileData: Partial<UserProfile> = {
             id: rawProfile.id,
@@ -185,8 +205,8 @@ export class FedifyHandler {
 
         // Fetch counts and initial posts in parallel
         const [countsData, postsData] = await Promise.allSettled([
-            this.getProfileCounts(handle),
-            this.getPostsPaginated(handle, 1, 20) // Start with page 1, 20 posts
+            this.getProfileCounts(handle, rawProfile.followers, rawProfile.following, rawProfile.outbox),
+            this.getPostsPaginated(handle, uri, 1, 20) // Start with page 1, 20 posts
         ]);
 
         // Handle counts
@@ -204,15 +224,22 @@ export class FedifyHandler {
         return profileData as UserProfile;
     };
 
-    // New method to get just the counts
-    private getProfileCounts = async (handle: string): Promise<{
+    // New method to get just the counts - now supports both handle and uri
+    private getProfileCounts = async (handle?: string, followerUrl?: string, followingUrl?:string, outboxUrl?:string): Promise<{
         followersCount: number;
         followingCount: number;
         postsCount: number;
     }> => {
         try {
+            // const query = this.buildQueryParams(handle,  followerUrl,followingUrl,outboxUrl);
+             const params = new URLSearchParams();
+            if (handle) params.set('handle', handle);
+            if (followerUrl) params.set('followerUrl', followerUrl);
+            if (followingUrl) params.set('followingUrl', followingUrl);
+            if (outboxUrl) params.set('outboxUrl', outboxUrl);
+            const query =  params.toString() ? `?${params.toString()}` : ''
             const countsResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/profile/${handle}/counts`, 
+                `${this.EXPRESS_URL}/profile/counts${query}`, 
                 {}, 0, false
             );
             
@@ -227,15 +254,21 @@ export class FedifyHandler {
         }
     };
 
-    // New paginated posts method
+    // New paginated posts method - now supports both handle and uri
     getPostsPaginated = async (
-        handle: string, 
+        handle?: string, 
+        uri?: string,
         page: number = 1, 
         limit: number = 20
     ): Promise<PaginatedPostsResponse> => {
         try {
+            const baseQuery = this.buildQueryParams(handle, uri);
+            const separator = baseQuery ? '&' : '?';
+            const paginationQuery = `page=${page}&limit=${limit}`;
+            const fullQuery = baseQuery + separator + paginationQuery;
+
             const postsResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/posts/${handle}?page=${page}&limit=${limit}`, 
+                `${this.EXPRESS_URL}/posts${fullQuery}`, 
                 {}, 0, false
             );
             
@@ -249,7 +282,7 @@ export class FedifyHandler {
                     // Already post objects
                     posts = orderedItems.map((post: any) => ({
                         id: post.id,
-                        content: this.stripHtml(post.object?.content || post.content || "") || post.object.attachment,
+                        content: this.stripHtml(post.object?.content || post.content || "") || post.object?.attachment,
                         publishedDate: post.published || post.object?.published,
                         url: post.object?.url || post.url,
                         replies: post.object?.replies?.totalItems || 0,
@@ -277,16 +310,26 @@ export class FedifyHandler {
         }
     };
 
-    // Method to load followers when needed
-    getFollowersPaginated = async (handle: string, page: number = 1, limit: number = 50): Promise<{
+    // Method to load followers when needed - now supports both handle and uri
+    getFollowersPaginated = async (
+        handle?: string, 
+        uri?: string,
+        page: number = 1, 
+        limit: number = 50
+    ): Promise<{
         items: Follower[];
         totalItems: number;
         hasNextPage: boolean;
         nextPage?: number;
     }> => {
         try {
+            const baseQuery = this.buildQueryParams(handle, uri);
+            const separator = baseQuery ? '&' : '?';
+            const paginationQuery = `page=${page}&limit=${limit}`;
+            const fullQuery = baseQuery + separator + paginationQuery;
+
             const followersResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/followers/${handle}?page=${page}&limit=${limit}`, 
+                `${this.EXPRESS_URL}/followers${fullQuery}`, 
                 {}, 0, false
             );
             
@@ -319,16 +362,26 @@ export class FedifyHandler {
         }
     };
 
-    // Method to load following when needed
-    getFollowingPaginated = async (handle: string, page: number = 1, limit: number = 50): Promise<{
+    // Method to load following when needed - now supports both handle and uri
+    getFollowingPaginated = async (
+        handle?: string, 
+        uri?: string,
+        page: number = 1, 
+        limit: number = 50
+    ): Promise<{
         items: Following[];
         totalItems: number;
         hasNextPage: boolean;
         nextPage?: number;
     }> => {
         try {
+            const baseQuery = this.buildQueryParams(handle, uri);
+            const separator = baseQuery ? '&' : '?';
+            const paginationQuery = `page=${page}&limit=${limit}`;
+            const fullQuery = baseQuery + separator + paginationQuery;
+
             const followingResponse = await this.makeRequest(
-                `${this.EXPRESS_URL}/following/${handle}?page=${page}&limit=${limit}`, 
+                `${this.EXPRESS_URL}/following${fullQuery}`, 
                 {}, 0, false
             );
             
@@ -388,7 +441,9 @@ export class FedifyHandler {
                 content: this.stripHtml(postObject.object?.content || postObject.content || ""),
                 publishedDate: postObject.published || postObject.object?.published,
                 url: postObject.object?.url || postObject.url || postUrl,
-                likes: postObject.object?.likes?.totalItems || postObject.likes?.totalItems || 0
+                likes: postObject.object?.likes?.totalItems || postObject.likes?.totalItems || 0,
+                replies: postObject.object?.replies?.totalItems || 0,
+                shares: postObject.object?.shares?.totalItems || 0
             };
         } catch (error) {
             console.warn(`Failed to resolve post from URL ${postUrl}:`, error);
@@ -407,14 +462,25 @@ export class FedifyHandler {
         }
     };
 
-    followUser = async (handle: string) => {
-        return this.makeRequest(`${this.API_BASE_URL}/users/${handle}/follow`, {
+    // Follow/unfollow methods updated to support both handle and uri
+    followUser = async (handle?: string, uri?: string) => {
+        if (!handle && !uri) {
+            throw new Error("Either handle or uri must be provided.");
+        }
+        
+        const query = this.buildQueryParams(handle, uri);
+        return this.makeRequest(`${this.API_BASE_URL}/users/follow${query}`, {
             method: "POST",
         }, 0);
     };
 
-    unfollowUser = async (handle: string) => {
-        return this.makeRequest(`${this.API_BASE_URL}/users/${handle}/unfollow`, {
+    unfollowUser = async (handle?: string, uri?: string) => {
+        if (!handle && !uri) {
+            throw new Error("Either handle or uri must be provided.");
+        }
+        
+        const query = this.buildQueryParams(handle, uri);
+        return this.makeRequest(`${this.API_BASE_URL}/users/unfollow${query}`, {
             method: "DELETE",
         }, 0);
     };
@@ -423,17 +489,30 @@ export class FedifyHandler {
         return this.makeRequest(`${this.API_BASE_URL}/users/search?query=${encodeURIComponent(searchText)}`, {}, 0);
     };
 
-    createPost = async (content: string, handle: string) => {
-        return this.makeRequest(`${this.EXPRESS_URL}/posts/${handle}`, {
+    // Create post method updated to support both handle and uri
+    createPost = async (content: string, handle?: string, uri?: string) => {
+        if (!handle && !uri) {
+            throw new Error("Either handle or uri must be provided.");
+        }
+        
+        const query = this.buildQueryParams(handle, uri);
+        return this.makeRequest(`${this.EXPRESS_URL}/posts${query}`, {
             method: "POST",
             body: JSON.stringify({ content }),
         }, 0, false);
     }
 
-    isFollowing = async (handle: string) => {
+    // Check following status updated to support both handle and uri
+    isFollowing = async (handle?: string, uri?: string) => {
+        if (!handle && !uri) {
+            throw new Error("Either handle or uri must be provided.");
+        }
+        
         try {
-            const following = await this.makeRequest(`${this.API_BASE_URL}/users/${handle}/following`, {}, 0, true);
-            return following.some((user: any) => user.handle === handle);
+            const query = this.buildQueryParams(handle, uri);
+            const following = await this.makeRequest(`${this.API_BASE_URL}/users/following${query}`, {}, 0, true);
+            const targetHandle = handle || this.extractUsernameFromUrl(uri!);
+            return following.some((user: any) => user.handle === targetHandle || user.url === uri);
         } catch (error) {
             console.warn('Failed to check following status:', error);
             return false;
