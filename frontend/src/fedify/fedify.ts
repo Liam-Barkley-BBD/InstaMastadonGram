@@ -276,13 +276,8 @@ export class FedifyHandler {
     limit: number = 10,
     maxFollowingToFetch: number = 30,
     postsPerUser: number = 3
-): Promise<{
-    items: Post[];
-    totalItems: number;
-    sources: { username: string; postCount: number; errors?: string }[];
-    fetchedFromUsers: number;
-    totalFollowing: number;
-}> => {
+): Promise<any> => {
+
     try {
         // Step 1: Get following accounts with pagination if needed
         let allFollowing: Following[] = [];
@@ -298,7 +293,7 @@ export class FedifyHandler {
             // Safety break to prevent infinite loops
             if (page > 5) break;
         }
-        console.log(allFollowing)
+
 
         if (allFollowing.length === 0) {
             return { 
@@ -327,12 +322,10 @@ export class FedifyHandler {
                 try {
                     const userPosts = await this.getPostsPaginated(
                         undefined,
-                        following.id,
+                        `${following.id}/outbox?page=true`,
                         1,
                         postsPerUser
                     );
-                    console.log(following)
-                    console.log(userPosts)
 
                     
                     if (userPosts.items.length > 0) {
@@ -375,7 +368,8 @@ export class FedifyHandler {
         });
 
         // Step 5: Take the requested number of posts
-        const selectedPosts = allPosts.slice(0, limit);
+        const selectedPosts:any[] = allPosts.slice(0, limit);
+
 
         // Step 6: Prepare source information
         const sources = Object.entries(sourceCounts)
@@ -387,21 +381,32 @@ export class FedifyHandler {
             }))
             .sort((a, b) => b.postCount - a.postCount);
 
-        return {
-            items: selectedPosts.map(post => ({
-                id: post.id,
-                content: post.content,
-                publishedDate: post.publishedDate,
-                url: post.url,
-                replies: post.replies,
-                shares: post.shares,
-                likes: post.likes
-            })),
-            totalItems: allPosts.length,
-            sources,
-            fetchedFromUsers: successfulFetches,
-            totalFollowing: allFollowing.length
-        };
+
+return {
+  items: selectedPosts
+  .filter(post =>
+    post.imagecontent !== undefined &&
+    post.textcontent !== "undefined"
+  )
+  .map(post => ({
+    id: post.id,
+    textcontent: post.textcontent,
+    imagecontent: post.imagecontent,
+    publishedDate: post.publishedDate,
+    url: post.url,
+    replies: post.replies,
+    shares: post.shares,
+    likes: post.likes,
+    sourceUser: post.sourceUser,
+    sourceDisplayName: post.sourceDisplayName
+  })),
+
+  totalItems: allPosts.length,
+  sources,
+  fetchedFromUsers: successfulFetches,
+  totalFollowing: allFollowing.length
+};
+
 
     } catch (error) {
         console.error('Failed to fetch optimized following posts:', error);
@@ -421,13 +426,13 @@ export class FedifyHandler {
         handle?: string, 
         uri?: string,
         page: number = 1, 
-        limit: number = 20
+        limit: number = 10
     ): Promise<PaginatedPostsResponse> => {
         try {
             const baseQuery = this.buildQueryParams(handle, uri);
             const separator = baseQuery ? '&' : '?';
-            const paginationQuery = `page=${page}&limit=${limit}`;
-            const fullQuery = baseQuery + separator + paginationQuery;
+
+            const fullQuery = baseQuery + separator;
 
             const postsResponse = await this.makeRequest(
                 `${this.EXPRESS_URL}/posts${fullQuery}`, 
@@ -442,9 +447,11 @@ export class FedifyHandler {
                     posts = await this.resolveMultiplePosts(orderedItems);
                 } else {
                     // Already post objects
+                    
                     posts = orderedItems.map((post: any) => ({
                         id: post.id,
-                        content: this.stripHtml(post.object?.content || post.content || "") || post.object?.attachment,
+                        imagecontent: post.object.attachment,
+                        textcontent: this.stripHtml(post.object.content),
                         publishedDate: post.published || post.object?.published,
                         url: post.object?.url || post.url,
                         replies: post.object?.replies?.totalItems || 0,
@@ -631,7 +638,7 @@ export class FedifyHandler {
         }
         
         const query = this.buildQueryParams(handle, uri);
-        return this.makeRequest(`${this.API_BASE_URL}/users/follow${query}`, {
+        return this.makeRequest(`${this.API_BASE_URL}/users/following${query}`, {
             method: "POST",
         }, 0);
     };

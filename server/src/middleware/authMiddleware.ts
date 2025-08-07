@@ -24,7 +24,7 @@ export const isAuthenticated = async(req: Request, res: Response, next: NextFunc
 
     req.user = { 
       handle: user.handle,
-      inboxUri: user.inboxUri,
+      inboxUri: user.uri,
     };
     next();
   } catch(error) {
