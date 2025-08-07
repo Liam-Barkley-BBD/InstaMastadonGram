@@ -4,6 +4,7 @@ import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 import ProfilePage from "./ProfilePage";
+import useAuth from "../services/user.service";
 
 interface UserCardProps {
   user: any;
@@ -185,7 +186,7 @@ const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
           </div>
           <div className="user-info">
             <div className="user-avatar">U</div>
-            <span className="username">@username</span>
+            <span className="username">{useAuth().user.handle}</span>
           </div>
         </header>
 
