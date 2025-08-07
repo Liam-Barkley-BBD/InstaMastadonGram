@@ -355,39 +355,40 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y nginx
 
-          sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
-          server {
-          listen 80;
-          server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
+            sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
+            server {
+              listen 80;
+              server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
 
-          client_max_body_size 100M;
+              client_max_body_size 100M;
 
-          location /.well-known/acme-challenge/ {
-              root /var/www/html;
-          }
+              # certbot challenge
+              location /.well-known/acme-challenge/ {
+                root /var/www/html;
+              }
 
-          location / {
-              root /var/www/html;
-              index index.html;
-              try_files $uri $uri/ /index.html;
-          }
+              # redirect everything else to HTTPS
+              location / {
+                return 301 https://$host$request_uri;
+              }
+            }
 
-          location /api/ {
-              proxy_pass http://localhost:8000; # Server
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
+            server {
+              listen 443 ssl;
+              server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
 
-              proxy_read_timeout 300s;
-              proxy_send_timeout 300s;
-          }
+              ssl_certificate /etc/letsencrypt/live/bbd-grad-program-2025.online/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/bbd-grad-program-2025.online/privkey.pem;
 
-            location /.well-known/webfinger {
+              client_max_body_size 100M;
+
+              location / {
+                root /var/www/html;
+                index index.html;
+                try_files $uri $uri/ /index.html;
+              }
+
+              location /api/ {
                 proxy_pass http://localhost:8000;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
@@ -397,9 +398,24 @@ jobs:
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
+
+                proxy_read_timeout 300s;
+                proxy_send_timeout 300s;
+              }
+
+              location /.well-known/webfinger {
+                proxy_pass http://localhost:8000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
             }
-          }
-          NGINX_CONF
+            NGINX_CONF
           EOF
 
       - name: Verify and Reload nginx
