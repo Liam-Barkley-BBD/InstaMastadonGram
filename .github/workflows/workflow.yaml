@@ -118,6 +118,7 @@ jobs:
             GOOGLE_CALLBACK_URL, googlecallbackurl
             SESSION_SECRET, sessionsecret
             DOMAIN, domainurl
+            FRONTEND_URI, frontenduri
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -139,6 +140,8 @@ jobs:
           GOOGLE_CALLBACK_URL=${{ env.GOOGLE_CALLBACK_URL }}
           SESSION_SECRET=${{ env.SESSION_SECRET }}
           DOMAIN=${{ env.DOMAIN }}
+          FRONTEND_URI=${{ env.FRONTEND_URI }}
+          
           ENV_VAR
           EOF
 
@@ -222,7 +225,7 @@ jobs:
           EOF
 
   build-frontend:
-    name: Build frontend
+    name: Build Frontend
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -230,6 +233,23 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::683044484462:role/github-oidc
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get secrets from AWS Key Store
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            VITE_BACKEND_URL, vitebackendurl
+
+      - name: Set up Vite environment variables
+        working-directory: frontend
+        run: |
+          echo "VITE_BACKEND_URL=${{ env.VITE_BACKEND_URL }}" > .env
 
       - name: Install required dependencies
         run: npm install --force
@@ -254,11 +274,11 @@ jobs:
           path: frontend/frontend-build.zip
 
   deploy-frontend:
-    name: Deploy frontend to EC2
+    name: Deploy Frontend to EC2
     permissions:
       id-token: write
       contents: read
-    needs:
+    needs: 
       - build-frontend
       - terraform
     runs-on: ubuntu-latest
@@ -274,6 +294,7 @@ jobs:
         with:
           secret-ids: |
             EC2_PRIVATE_KEY, privatekey
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -283,40 +304,24 @@ jobs:
         run: |
           echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
           chmod 0500 privatekey.pem
+
       - name: Deploy
         run: |
           EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          scp -o StrictHostKeyChecking=no -i privatekey.pem ./frontend-build.zip "ubuntu@$EC2_HOST:frontend-build.zip"
+          scp -o StrictHostKeyChecking=no -i privatekey.pem ./frontend-build.zip "ubuntu@$EC2_HOST:~/frontend-build.zip"
 
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-            unzip -o frontend-build.zip && cd frontend-build && npm install --force
-          '
           ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
-          cat <<EOF > frontend-build/start-server.sh
-          #!/bin/bash
-          npm run preview
-          EOF'
-      - name: Make script executable
-        run: |
-          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
-            chmod +x frontend-build/start-server.sh
-          '
-      - name: Run with pm2
-        run: |
-          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
-            cd frontend-build/ && 
-            # Stop and delete existing pm2 process if it exists
-            if pm2 list | grep -q "frontend"; then
-              pm2 delete frontend;
-            fi && 
-            pm2 start ./start-server.sh --name frontend
+            sudo apt-get update &&
+            sudo apt-get install -y unzip &&
+            unzip -o frontend-build.zip &&
+            sudo rm -rf /var/www/html/* &&
+            sudo cp -r frontend-build/dist/* /var/www/html/
           '
 
   issue-certificates:
     needs:
       - deploy-api
+      - deploy-frontend
       - terraform
     permissions:
       id-token: write
@@ -350,33 +355,38 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y nginx
 
-          sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
-          server {
-          listen 80;
-          server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
+            sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
+            server {
+              listen 80;
+              server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
 
-          client_max_body_size 100M;
+              client_max_body_size 100M;
 
-          location /.well-known/acme-challenge/ {
-              root /var/www/html;
-          }
+              location /.well-known/acme-challenge/ {
+                root /var/www/html;
+              }
 
-          location /api/ {
-              proxy_pass http://localhost:8000;
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
+              location / {
+                return 301 https://\$host\$request_uri;
+              }
+            }
 
-              proxy_read_timeout 300s;
-              proxy_send_timeout 300s;
-          }
+            server {
+              listen 443 ssl;
+              server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
 
-            location /.well-known/webfinger {
+              ssl_certificate /etc/letsencrypt/live/bbd-grad-program-2025.online/fullchain.pem;
+              ssl_certificate_key /etc/letsencrypt/live/bbd-grad-program-2025.online/privkey.pem;
+
+              client_max_body_size 100M;
+
+              location / {
+                root /var/www/html;
+                index index.html;
+                try_files $uri $uri/ /index.html;
+              }
+
+              location /api/ {
                 proxy_pass http://localhost:8000;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
@@ -386,9 +396,24 @@ jobs:
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
+
+                proxy_read_timeout 300s;
+                proxy_send_timeout 300s;
+              }
+
+              location /.well-known/webfinger {
+                proxy_pass http://localhost:8000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+              }
             }
-          }
-          NGINX_CONF
+            NGINX_CONF
           EOF
 
       - name: Verify and Reload nginx

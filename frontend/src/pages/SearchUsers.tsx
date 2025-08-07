@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
-import type { UserProfile } from "../types";
+// import type { UserProfile } from "../types";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 import ProfilePage from "./ProfilePage";
+import useAuth from "../services/user.service";
 
 interface UserCardProps {
-  user: UserProfile;
+  user: any;
   isFollowing: boolean;
   isLoading: boolean;
   onFollow: (userId: string) => void;
@@ -84,12 +85,12 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
 const SearchUsersPage = () => {
   const [viewingProfile, setViewingProfile] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleUserClick = (userId: string) => {
     const user = searchResults.find(u => u.id === userId);
@@ -185,7 +186,7 @@ const SearchUsersPage = () => {
           </div>
           <div className="user-info">
             <div className="user-avatar">U</div>
-            <span className="username">@username</span>
+            <span className="username">{useAuth().user.handle}</span>
           </div>
         </header>
 
@@ -229,7 +230,7 @@ const SearchUsersPage = () => {
               </div>
             ) : searchResults.length > 0 ? (
               <div className="results-list">
-                {searchResults.map((user) => (
+                {searchResults.map((user:any) => (
                   <UserCard
                     key={user.id}
                     user={user}

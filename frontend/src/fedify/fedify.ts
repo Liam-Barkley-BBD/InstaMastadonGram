@@ -1,33 +1,34 @@
+// Define interfaces for type safety
 interface UserProfile {
-  id: string;
-  username: string;
-  displayName: string;
-  bio: string;
-  url: string;
-  avatar?: string;
-  followersCount: number;
-  followingCount: number;
-  postsCount: number;
-  followers: Follower[];
-  following: Following[];
-  posts: Post[];
-  publishedDate: string;
+    id: string;
+    username: string;
+    displayName: string;
+    bio: string;
+    url: string;
+    avatar?: string;
+    followersCount: number;
+    followingCount: number;
+    postsCount: number;
+    followers: Follower[];
+    following: Following[];
+    posts: Post[];
+    publishedDate: string;
 }
 
 interface Follower {
-  id: string;
-  username: string;
-  displayName: string;
-  url: string;
-  avatar?: string;
+    id: string;
+    username: string;
+    displayName: string;
+    url: string;
+    avatar?: string;
 }
 
 interface Following {
-  id: string;
-  username: string;
-  displayName: string;
-  url: string;
-  avatar?: string;
+    id: string;
+    username: string;
+    displayName: string;
+    url: string;
+    avatar?: string;
 }
 
 interface Post {
@@ -168,6 +169,33 @@ export class FedifyHandler {
       return "unknown";
     }
   }
+    extractDomain(handle:string):string {
+        if (handle.includes('@')) {
+            return handle.split('@')[1];
+        }
+        return handle;
+    }
+
+    private extractUsernameFromUrl(url: string): string {
+        try {
+            const urlObj = new URL(url);
+            const pathParts = urlObj.pathname.split('/').filter(part => part);
+
+            if (pathParts.includes('users') && pathParts.length > 1) {
+                const userIndex = pathParts.indexOf('users');
+                return pathParts[userIndex + 1] || 'unknown';
+            }
+            // Handle @username format
+            const lastPart = pathParts[pathParts.length - 1];
+            if (lastPart?.startsWith('@')) {
+                return lastPart.substring(1);
+            }
+
+            return lastPart || 'unknown';
+        } catch (error) {
+            return 'unknown';
+        }
+    }
 
   private async resolveMultipleUsers(
     userUrls: string[],

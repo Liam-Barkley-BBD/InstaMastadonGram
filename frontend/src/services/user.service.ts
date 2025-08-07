@@ -55,5 +55,5 @@ export default function useAuth() {
 }
 
 export function isCurrentUser(handle:string){
-  return handle === useAuth().user.handle
+  return handle === useAuth()?.user?.handle
 }
