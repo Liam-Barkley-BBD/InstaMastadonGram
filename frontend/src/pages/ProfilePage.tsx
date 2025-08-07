@@ -3,10 +3,11 @@ import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 import { isCurrentUser } from '../services/user.service';
 import useAuth from '../services/user.service';
+import PostModal from '../components/PostModal';
 
 interface Props {
   handle: string;
-  isProfileTab: boolean;
+  isProfileTab:boolean;
 }
 
 interface User {
@@ -35,11 +36,6 @@ interface Post {
   url: string;
   likes: number;
   shares?: number;
-  // ActivityPub specific fields
-  object?: {
-    content?: string;
-    attachment?: PostContent[];
-  };
 }
 
 interface UserProfile {
@@ -75,39 +71,15 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // Parse ActivityPub post content
-  const parsePostContent = (post: Post): { text: string; images: PostContent[] } => {
-    let text = '';
-    let images: PostContent[] = [];
-
-    // Handle ActivityPub format
-    if (post.object) {
-      text = post.object.content || '';
-      images = post.object.attachment || [];
-    } else if (typeof post.content === 'string') {
-      text = post.content;
-    } else if (Array.isArray(post.content)) {
-      // Handle mixed content array
-      post.content.forEach(item => {
-        if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
-          images.push(item);
-        }
-      });
-    }
-
-    // Clean HTML from text
-    const cleanText = text.replace(/<[^>]*>/g, '').trim();
-
-    return { text: cleanText, images };
-  };
-
   useEffect(() => {
+
     const fetchProfile = async () => {
       try {
         setLoading(true);
         setError(null);
 
         const profileData: any = await fedifyHandler.current.getProfile(handle);
+        console.log(profileData)
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
@@ -189,135 +161,39 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
     setSelectedPost(null);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) {
-      return '1 day ago';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    }
-  };
-
-  const renderPostContent = (post: Post) => {
-    const { text, images } = parsePostContent(post);
-    
-    return (
-      <div className="post-content">
-        {images.length > 0 && (
-          <div className={`post-images ${images.length > 1 ? 'multiple-images' : 'single-image'}`}>
-            {images.slice(0, 4).map((image, index) => (
-              <div 
-                key={index} 
-                className={`post-image ${images.length > 1 ? `image-${index + 1}-of-${Math.min(images.length, 4)}` : ''}`}
-              >
-                <img 
-                  src={image.url} 
-                  alt={image.name || `Image ${index + 1}`} 
-                  loading="lazy"
-                />
-                {images.length > 4 && index === 3 && (
-                  <div className="more-images-overlay">
-                    +{images.length - 4}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {text && (
+  const renderPostContent = (content: string | PostContent[]) => {
+    if (typeof content === 'string') {
+      return (
+        <div className="post-content">
           <div className="post-text">
-            <p>{text}</p>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const PostModal = () => {
-    if (!isModalOpen || !selectedPost || !profile) return null;
-
-    const { text, images } = parsePostContent(selectedPost);
-
-    return (
-      <div className="post-modal-overlay" onClick={closeModal}>
-        <div className="post-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="post-modal-header">
-            <div className="post-author">
-              <img 
-                src={profile.avatar || '/default-avatar.png'} 
-                alt={profile.displayName}
-                className="post-author-avatar"
-              />
-              <span className="post-author-name">{profile.displayName || profile.username}</span>
-            </div>
-            <button className="post-modal-close" onClick={closeModal}>×</button>
-          </div>
-          
-          <div className="post-modal-content">
-            {images.length > 0 && (
-              <div className="post-modal-images">
-                {images.length === 1 ? (
-                  <div className="single-modal-image">
-                    <img 
-                      src={images[0].url} 
-                      alt={images[0].name || 'Post image'}
-                    />
-                  </div>
-                ) : (
-                  <div className="multiple-modal-images">
-                    {images.map((image, index) => (
-                      <div key={index} className="modal-image-item">
-                        <img 
-                          src={image.url} 
-                          alt={image.name || `Image ${index + 1}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {text && (
-              <div className="post-modal-text">
-                <p>{text}</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="post-modal-footer">
-            <div className="post-actions">
-              <button className="post-action like">
-                <span className="action-icon">♥</span>
-                <span>{selectedPost.likes}</span>
-              </button>
-              {selectedPost.shares !== undefined && (
-                <button className="post-action share">
-                  <span className="action-icon">↗</span>
-                  <span>{selectedPost.shares}</span>
-                </button>
-              )}
-            </div>
-            <div className="post-timestamp">
-              {formatDate(selectedPost.publishedDate)}
-            </div>
+            <p>{content.replace(/<[^>]*>/g, '')}</p>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
+
+    if (Array.isArray(content)) {
+      return (
+        <div className="post-content">
+          {content.map((item, index) => {
+            if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
+              return (
+                <div key={index} className="post-image">
+                  <img 
+                    src={item.url} 
+                    alt={item.name || 'Post image'} 
+                    loading="lazy"
+                  />
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      );
+    }
+
+    return null;
   };
 
   if (loading) {
@@ -387,13 +263,12 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
     <>
       <div className="main-content-inner profile-container">
         <main className="profile-page">
-          {isProfileTab && (
-            <header className="profile-header">
-              <button className="back-button">‹</button>
-              <h2>{profile.username}</h2>
-              <button className="menu-button">⋯</button>
-            </header>
-          )}
+          {isProfileTab &&
+          <header className="profile-header">
+            <button className="back-button">‹</button>
+            <h2>{profile.username}</h2>
+            <button className="menu-button">⋯</button>
+          </header>}
 
           <article className="profile-content">
             <section className="profile-info">
@@ -434,29 +309,23 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
               {posts && posts.length > 0 ? (
                 <>
                   <div className="gallery-grid">
-                    {posts.map((post, index) => {
-                      const { images } = parsePostContent(post);
-                      return (
-                        <article 
-                          key={post.id || index} 
-                          className="gallery-item clickable-post"
-                          onClick={() => handlePostClick(post)}
-                        >
-                          {renderPostContent(post)}
-                          <div className="post-meta">
-                            <span className="post-date">
-                              {new Date(post.publishedDate).toLocaleDateString()}
-                            </span>
-                            <div className="post-stats">
-                              <span>♥ {post.likes}</span>
-                              {images.length > 1 && (
-                                <span className="image-count">📷 {images.length}</span>
-                              )}
-                            </div>
+                    {posts.map((post, index) => (
+                      <article 
+                        key={post.id || index} 
+                        className="gallery-item clickable-post"
+                        onClick={() => handlePostClick(post)}
+                      >
+                        {renderPostContent(post.textcontent || post.imagecontent)}
+                        <div className="post-meta">
+                          <span className="post-date">
+                            {new Date(post.publishedDate).toLocaleDateString()}
+                          </span>
+                          <div className="post-stats">
+                            <span>♥ {post.likes}</span>
                           </div>
-                        </article>
-                      );
-                    })}
+                        </div>
+                      </article>
+                    ))}
                   </div>
                   {hasMorePosts && (
                     <div ref={loadMoreRef} className="load-more-trigger">
@@ -487,8 +356,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
         </main>
       </div>
       
-      <PostModal />
-    </>
+    <PostModal isOpen={isModalOpen} post={selectedPost} profile={profile} onClose={closeModal} />    </>
   );
 };
 
