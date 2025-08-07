@@ -8,7 +8,7 @@ import ActivityModel from "../models/activity.model.ts";
 import mongoose from "mongoose";
 
 const router = Router();
-router.use(isAuthenticated);
+// router.use(isAuthenticated);
 
 router.get('/me', async (req, res) => {
   try {

@@ -73,7 +73,7 @@ router.get('/posts', async (req, res) => {
         const { handle, uri } = req.query;
         const postsData = await makeActivityPubRequest(uri??`https://mastodon.social/users/${handle}/outbox?page=true`);
         res.json(postsData);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching posts:', error);
         res.status(500).json({ error: error.message });
     }
