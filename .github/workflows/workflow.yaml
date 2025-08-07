@@ -238,14 +238,14 @@ jobs:
       - name: Package application
         run: |
           mkdir -p frontend-build
-          cp -r frontend/* frontend-build/
+          rsync -av --progress frontend/ frontend-build/ --exclude node_modules --exclude frontend-build.zip
           zip -r frontend-build.zip frontend-build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: frontend/frontend-build.zip
+          path: frontend-build.zip
 
   deploy-frontend:
     name: Deploy Frontend to EC2
