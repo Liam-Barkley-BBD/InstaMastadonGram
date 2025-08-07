@@ -492,8 +492,8 @@ federation
         .populate<{ following: ActorDoc }>("following");
 
       const items = follows
-        .filter(f => !!f.following?.uri && !!f.following?.inboxUri)
-        .map(f => new URL(f.following!.uri));
+        .filter(f => !!f.following?.id && !!f.following?.inboxUri)
+        .map(f => new URL(f.following!.id));
 
       const totalItems = await FollowModel.countDocuments({ following: followingActor._id });
       const nextCursor = skip + PAGE_SIZE < totalItems ? String(page + 1) : null;
