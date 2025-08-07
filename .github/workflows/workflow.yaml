@@ -362,14 +362,12 @@ jobs:
 
               client_max_body_size 100M;
 
-              # certbot challenge
               location /.well-known/acme-challenge/ {
                 root /var/www/html;
               }
 
-              # redirect everything else to HTTPS
               location / {
-                return 301 https://$host$request_uri;
+                return 301 https://\$host\$request_uri;
               }
             }
 
