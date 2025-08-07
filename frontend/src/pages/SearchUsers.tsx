@@ -78,7 +78,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
           disabled={isLoading}
           aria-label={isFollowing ? `Unfollow ${user.username}` : `Follow ${user.username}`}
         >
-          {  user.following.find(JSON.parse(localStorage.getItem('user') || '').inboxUri) ? (
+          {  isFollowing ? (
             <>
               <UserCheck size={16} />
               <span>unFollow</span>
@@ -199,7 +199,7 @@ const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
           </div>
           <div className="user-info">
             <div className="user-avatar">U</div>
-            <span className="username">{useAuth().user?.handle}</span>
+            <span className="username">{useAuth()?.user?.handle}</span>
           </div>
         </header>
 

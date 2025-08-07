@@ -57,7 +57,7 @@ export class FedifyHandler {
         "Connection": "keep-alive",
     }
 
-    EXPRESS_URL = "http://localhost:8000/api/frontend";
+    EXPRESS_URL = `${import.meta.env.VITE_BACKEND_URL}/api/frontend`;
 
      async makeRequest(
         url: string,
@@ -260,6 +260,161 @@ export class FedifyHandler {
             return { followersCount: 0, followingCount: 0, postsCount: 0 };
         }
     };
+
+    private shuffleArray = <T>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
+    getFollowingPosts = async (
+    handle?: string,
+    uri?: string,
+    limit: number = 10,
+    maxFollowingToFetch: number = 30,
+    postsPerUser: number = 3
+): Promise<{
+    items: Post[];
+    totalItems: number;
+    sources: { username: string; postCount: number; errors?: string }[];
+    fetchedFromUsers: number;
+    totalFollowing: number;
+}> => {
+    try {
+        // Step 1: Get following accounts with pagination if needed
+        let allFollowing: Following[] = [];
+        let page = 1;
+        let hasMore = true;
+
+        while (hasMore && allFollowing.length < maxFollowingToFetch) {
+            const followingResponse = await this.getFollowingPaginated(handle, uri, page, 50);
+            allFollowing.push(...followingResponse.items);
+            hasMore = followingResponse.hasNextPage;
+            page++;
+            
+            // Safety break to prevent infinite loops
+            if (page > 5) break;
+        }
+        console.log(allFollowing)
+
+        if (allFollowing.length === 0) {
+            return { 
+                items: [], 
+                totalItems: 0, 
+                sources: [],
+                fetchedFromUsers: 0,
+                totalFollowing: 0
+            };
+        }
+
+        // Step 2: Shuffle following list and take subset to avoid always fetching from the same users
+        const shuffledFollowing = this.shuffleArray(allFollowing).slice(0, maxFollowingToFetch);
+        
+        // Step 3: Fetch posts with controlled concurrency
+        const allPosts: (Post & { sourceUser: string; sourceDisplayName: string })[] = [];
+        const sourceCounts: { [key: string]: { count: number; displayName: string; error?: string } } = {};
+        let successfulFetches = 0;
+
+        // Process in batches to avoid overwhelming the server
+        const batchSize = 5;
+        for (let i = 0; i < shuffledFollowing.length; i += batchSize) {
+            const batch = shuffledFollowing.slice(i, i + batchSize);
+            
+            const batchPromises = batch.map(async (following) => {
+                try {
+                    const userPosts = await this.getPostsPaginated(
+                        undefined,
+                        following.id,
+                        1,
+                        postsPerUser
+                    );
+                    console.log(following)
+                    console.log(userPosts)
+
+                    
+                    if (userPosts.items.length > 0) {
+                        const postsWithSource = userPosts.items.map(post => ({
+                            ...post,
+                            sourceUser: following.username || following.displayName,
+                            sourceDisplayName: following.displayName || following.username
+                        }));
+
+                        allPosts.push(...postsWithSource);
+                        sourceCounts[following.username || following.displayName] = {
+                            count: userPosts.items.length,
+                            displayName: following.displayName || following.username
+                        };
+                        successfulFetches++;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to fetch posts for ${following.username}:`, error);
+                    sourceCounts[following.username || following.displayName] = {
+                        count: 0,
+                        displayName: following.displayName || following.username,
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                    };
+                }
+            });
+
+            await Promise.all(batchPromises);
+            
+            // Small delay between batches to be respectful to the server
+            if (i + batchSize < shuffledFollowing.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        // Step 4: Sort by published date (newest first)
+        allPosts.sort((a, b) => {
+            const dateA = new Date(a.publishedDate).getTime();
+            const dateB = new Date(b.publishedDate).getTime();
+            return dateB - dateA;
+        });
+
+        // Step 5: Take the requested number of posts
+        const selectedPosts = allPosts.slice(0, limit);
+
+        // Step 6: Prepare source information
+        const sources = Object.entries(sourceCounts)
+            .map(([username, info]) => ({
+                username,
+                postCount: info.count,
+                displayName: info.displayName,
+                ...(info.error && { errors: info.error })
+            }))
+            .sort((a, b) => b.postCount - a.postCount);
+
+        return {
+            items: selectedPosts.map(post => ({
+                id: post.id,
+                content: post.content,
+                publishedDate: post.publishedDate,
+                url: post.url,
+                replies: post.replies,
+                shares: post.shares,
+                likes: post.likes
+            })),
+            totalItems: allPosts.length,
+            sources,
+            fetchedFromUsers: successfulFetches,
+            totalFollowing: allFollowing.length
+        };
+
+    } catch (error) {
+        console.error('Failed to fetch optimized following posts:', error);
+        return { 
+            items: [], 
+            totalItems: 0, 
+            sources: [],
+            fetchedFromUsers: 0,
+            totalFollowing: 0
+        };
+    }
+};
+
 
     // New paginated posts method - now supports both handle and uri
     getPostsPaginated = async (
