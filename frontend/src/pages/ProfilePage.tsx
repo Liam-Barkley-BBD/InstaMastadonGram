@@ -3,6 +3,7 @@ import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 import { isCurrentUser } from '../services/user.service';
 import useAuth from '../services/user.service';
+import PostModal from '../components/PostModal';
 
 interface Props {
   handle: string;
@@ -234,66 +235,6 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
     return null;
   };
 
-  const PostModal = () => {
-    if (!isModalOpen || !selectedPost || !profile) return null;
-
-    const textContent = extractTextContent(selectedPost.textcontent);
-    const imageContent = getImageContent(selectedPost.imagecontent);
-
-    return (
-      <div className="post-modal-overlay" onClick={closeModal}>
-        <div className="post-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="post-modal-header">
-            <div className="post-author">
-              <img 
-                src={profile.avatar || '/default-avatar.png'} 
-                alt={profile.displayName}
-                className="post-author-avatar"
-              />
-              <span className="post-author-name">{profile.displayName || profile.username}</span>
-            </div>
-            <button className="post-modal-close" onClick={closeModal}>×</button>
-          </div>
-          
-          <div className="post-modal-content">
-            {imageContent && (
-              <div className="post-modal-image">
-                <img 
-                  src={imageContent.url} 
-                  alt={imageContent.name || 'Post image'}
-                />
-              </div>
-            )}
-            
-            {textContent && (
-              <div className="post-modal-text">
-                <p>{textContent}</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="post-modal-footer">
-            <div className="post-actions">
-              <button className="post-action like">
-                <span className="action-icon">♥</span>
-                <span>{selectedPost.likes}</span>
-              </button>
-              {selectedPost.shares !== undefined && (
-                <button className="post-action share">
-                  <span className="action-icon">↗</span>
-                  <span>{selectedPost.shares}</span>
-                </button>
-              )}
-            </div>
-            <div className="post-timestamp">
-              {formatDate(selectedPost.publishedDate)}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div className="main-content-inner profile-container">
@@ -454,8 +395,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
         </main>
       </div>
       
-      <PostModal />
-    </>
+    <PostModal isOpen={isModalOpen} post={selectedPost} profile={profile} onClose={closeModal} />    </>
   );
 };
 
