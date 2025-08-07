@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
-import type { UserProfile } from "../types";
+// import type { UserProfile } from "../types";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 import ProfilePage from "./ProfilePage";
 import useAuth from "../services/user.service";
 
 interface UserCardProps {
-  user: UserProfile;
+  user: any;
   isFollowing: boolean;
   isLoading: boolean;
   onFollow: (userId: string) => void;
@@ -83,13 +83,13 @@ const SearchUsersPage = () => {
   const { handle } = useAuth().user;
   const [recentSearches, setRecentSearches] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [viewingProfile, setViewingProfile] = useState<UserProfile |string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
-  const debounceTimerRef = useRef<NodeJS.Timeout>();
+const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadRecentSearches = useCallback(async () => {
     try {
@@ -190,7 +190,7 @@ const SearchUsersPage = () => {
           </div>
           <div className="user-info">
             <div className="user-avatar">U</div>
-            <span className="username">@username</span>
+            <span className="username">{useAuth()?.user?.handle}</span>
           </div>
         </header>
 
@@ -236,6 +236,8 @@ const SearchUsersPage = () => {
             ) : (
               <div className="results-list">
                 {resultsToShow.map((user) => (
+
+
                   <UserCard
                     key={user.id}
                     user={user}

@@ -5,9 +5,11 @@ import { isCurrentUser } from '../services/user.service';
 import useAuth from '../services/user.service';
 
 interface Props {
+
   handle: UserProfile;
   isProfileTab:boolean;
   preloadedData?:any
+
 }
 
 interface User {
@@ -36,6 +38,11 @@ interface Post {
   url: string;
   likes: number;
   shares?: number;
+  // ActivityPub specific fields
+  object?: {
+    content?: string;
+    attachment?: PostContent[];
+  };
 }
 
 interface UserProfile {
@@ -56,9 +63,9 @@ interface UserProfile {
 
 const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
   const { user } = useAuth();
-  const isViewingOwnProfile = isCurrentUser(user?.handle);
+  const isViewingOwnProfile = isCurrentUser(user?.handle as string);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +78,33 @@ const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
+  // Parse ActivityPub post content
+  const parsePostContent = (post: Post): { text: string; images: PostContent[] } => {
+    let text = '';
+    let images: PostContent[] = [];
 
+    // Handle ActivityPub format
+    if (post.object) {
+      text = post.object.content || '';
+      images = post.object.attachment || [];
+    } else if (typeof post.content === 'string') {
+      text = post.content;
+    } else if (Array.isArray(post.content)) {
+      // Handle mixed content array
+      post.content.forEach(item => {
+        if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
+          images.push(item);
+        }
+      });
+    }
+
+    // Clean HTML from text
+    const cleanText = text.replace(/<[^>]*>/g, '').trim();
+
+    return { text: cleanText, images };
+  };
+
+  useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
@@ -80,6 +112,7 @@ const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
         console.log("preloadeddata",preloadedData)
 
         const profileData: any = preloadedData?preloadedData:await fedifyHandler.current.getProfile(handle);
+
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
@@ -183,61 +216,45 @@ const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
     }
   };
 
-  const extractTextContent = (content: string | PostContent[]): string => {
-    if (typeof content === 'string') {
-      // Remove HTML tags for display
-      return content.replace(/<[^>]*>/g, '');
-    }
-    return '';
-  };
-
-  const getImageContent = (content: string | PostContent[]): PostContent | null => {
-    if (Array.isArray(content)) {
-      return content.find(item => item.type === 'Document' && item.mediaType?.startsWith('image/')) || null;
-    }
-    return null;
-  };
-
-  const renderPostContent = (content: string | PostContent[]) => {
-    if (typeof content === 'string') {
-      return (
-        <div className="post-content">
-          <div className="post-text">
-            <p>{content.replace(/<[^>]*>/g, '')}</p>
+  const renderPostContent = (post: Post) => {
+    const { text, images } = parsePostContent(post);
+    
+    return (
+      <div className="post-content">
+        {images.length > 0 && (
+          <div className={`post-images ${images.length > 1 ? 'multiple-images' : 'single-image'}`}>
+            {images.slice(0, 4).map((image, index) => (
+              <div 
+                key={index} 
+                className={`post-image ${images.length > 1 ? `image-${index + 1}-of-${Math.min(images.length, 4)}` : ''}`}
+              >
+                <img 
+                  src={image.url} 
+                  alt={image.name || `Image ${index + 1}`} 
+                  loading="lazy"
+                />
+                {images.length > 4 && index === 3 && (
+                  <div className="more-images-overlay">
+                    +{images.length - 4}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      );
-    }
-
-    if (Array.isArray(content)) {
-      return (
-        <div className="post-content">
-          {content.map((item, index) => {
-            if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
-              return (
-                <div key={index} className="post-image">
-                  <img 
-                    src={item.url} 
-                    alt={item.name || 'Post image'} 
-                    loading="lazy"
-                  />
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      );
-    }
-
-    return null;
+        )}
+        {text && (
+          <div className="post-text">
+            <p>{text}</p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const PostModal = () => {
     if (!isModalOpen || !selectedPost || !profile) return null;
 
-    const textContent = extractTextContent(selectedPost.content);
-    const imageContent = getImageContent(selectedPost.content);
+    const { text, images } = parsePostContent(selectedPost);
 
     return (
       <div className="post-modal-overlay" onClick={closeModal}>
@@ -255,18 +272,33 @@ const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
           </div>
           
           <div className="post-modal-content">
-            {imageContent && (
-              <div className="post-modal-image">
-                <img 
-                  src={imageContent.url} 
-                  alt={imageContent.name || 'Post image'}
-                />
+            {images.length > 0 && (
+              <div className="post-modal-images">
+                {images.length === 1 ? (
+                  <div className="single-modal-image">
+                    <img 
+                      src={images[0].url} 
+                      alt={images[0].name || 'Post image'}
+                    />
+                  </div>
+                ) : (
+                  <div className="multiple-modal-images">
+                    {images.map((image, index) => (
+                      <div key={index} className="modal-image-item">
+                        <img 
+                          src={image.url} 
+                          alt={image.name || `Image ${index + 1}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             
-            {textContent && (
+            {text && (
               <div className="post-modal-text">
-                <p>{textContent}</p>
+                <p>{text}</p>
               </div>
             )}
           </div>
@@ -360,12 +392,13 @@ const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
     <>
       <div className="main-content-inner profile-container">
         <main className="profile-page">
-          {isProfileTab &&
-          <header className="profile-header">
-            <button className="back-button">‹</button>
-            <h2>{profile.username}</h2>
-            <button className="menu-button">⋯</button>
-          </header>}
+          {isProfileTab && (
+            <header className="profile-header">
+              <button className="back-button">‹</button>
+              <h2>{profile.username}</h2>
+              <button className="menu-button">⋯</button>
+            </header>
+          )}
 
           <article className="profile-content">
             <section className="profile-info">
@@ -406,23 +439,29 @@ const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
               {posts && posts.length > 0 ? (
                 <>
                   <div className="gallery-grid">
-                    {posts.map((post, index) => (
-                      <article 
-                        key={post.id || index} 
-                        className="gallery-item clickable-post"
-                        onClick={() => handlePostClick(post)}
-                      >
-                        {renderPostContent(post.content)}
-                        <div className="post-meta">
-                          <span className="post-date">
-                            {new Date(post.publishedDate).toLocaleDateString()}
-                          </span>
-                          <div className="post-stats">
-                            <span>♥ {post.likes}</span>
+                    {posts.map((post, index) => {
+                      const { images } = parsePostContent(post);
+                      return (
+                        <article 
+                          key={post.id || index} 
+                          className="gallery-item clickable-post"
+                          onClick={() => handlePostClick(post)}
+                        >
+                          {renderPostContent(post)}
+                          <div className="post-meta">
+                            <span className="post-date">
+                              {new Date(post.publishedDate).toLocaleDateString()}
+                            </span>
+                            <div className="post-stats">
+                              <span>♥ {post.likes}</span>
+                              {images.length > 1 && (
+                                <span className="image-count">📷 {images.length}</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </article>
-                    ))}
+                        </article>
+                      );
+                    })}
                   </div>
                   {hasMorePosts && (
                     <div ref={loadMoreRef} className="load-more-trigger">
