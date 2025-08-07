@@ -118,6 +118,7 @@ jobs:
             GOOGLE_CALLBACK_URL, googlecallbackurl
             SESSION_SECRET, sessionsecret
             DOMAIN, domainurl
+            FRONTEND_URI, frontenduri
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -139,6 +140,8 @@ jobs:
           GOOGLE_CALLBACK_URL=${{ env.GOOGLE_CALLBACK_URL }}
           SESSION_SECRET=${{ env.SESSION_SECRET }}
           DOMAIN=${{ env.DOMAIN }}
+          FRONTEND_URI=${{ env.FRONTEND_URI }}
+          
           ENV_VAR
           EOF
 
