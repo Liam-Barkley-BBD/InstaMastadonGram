@@ -27,7 +27,12 @@ app.use(cors({
 
 app.set("trust proxy", true);
 
-app.use(integrateFederation(federation, (req) => req.user));
+app.use((req, res, next) => {
+  if (req.method === 'POST' && /^\/api\/posts\/[^/]+$/.test(req.path)) {
+    return next();
+  }
+  integrateFederation(federation, (req) => req.user)(req, res, next);
+});
 
 app.use("/api/posts", postRoutes);
 
