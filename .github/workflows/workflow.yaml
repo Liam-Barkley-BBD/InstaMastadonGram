@@ -357,7 +357,7 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y nginx
 
-            sudo tee /etc/nginx/sites-enabled/default > /dev/null <<'NGINX_CONF'
+            sudo bash -c 'cat > /etc/nginx/sites-enabled/default' <<'EOF'
             server {
               listen 80;
               server_name bbd-grad-program-2025.online www.bbd-grad-program-2025.online;
@@ -392,7 +392,7 @@ jobs:
                 proxy_pass http://localhost:8000;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade \$http_upgrade;
-                proxy_set_header Connection 'upgrade';
+                proxy_set_header Connection "upgrade";
                 proxy_set_header Host \$host;
                 proxy_cache_bypass \$http_upgrade;
                 proxy_set_header X-Real-IP \$remote_addr;
@@ -407,7 +407,7 @@ jobs:
                 proxy_pass http://localhost:8000;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade \$http_upgrade;
-                proxy_set_header Connection 'upgrade';
+                proxy_set_header Connection "upgrade";
                 proxy_set_header Host \$host;
                 proxy_cache_bypass \$http_upgrade;
                 proxy_set_header X-Real-IP \$remote_addr;
@@ -415,7 +415,7 @@ jobs:
                 proxy_set_header X-Forwarded-Proto \$scheme;
               }
             }
-            NGINX_CONF
+            EOF
           EOF
 
       - name: Verify and Reload nginx
