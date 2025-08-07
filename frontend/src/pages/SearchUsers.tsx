@@ -13,30 +13,54 @@ interface UserCardProps {
   isLoading: boolean;
   onFollow: (userId: string) => void;
   onUserClick: (userId: string) => void;
+  currentUser: any; // Add currentUser prop
 }
 
 function removeForwardSlashes(str: string) {
   return str.replace(/\//g, '');
 }
 
-const UserCard = memo(({ user, isFollowing, isLoading, onUserClick }: UserCardProps) => {
-  const handleCardClick = () => {
-    onUserClick(user.id);
-  };
-
-  const handleFollowClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    follow({
-      actorHandle: `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`,
-      userName: JSON.parse(localStorage.getItem('user') || '').handle,
-      activity: 'follow'
-    });
-  };
-
-  const userUrl = new URL(user.url);
-  console.log(user)
-
+const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick, currentUser }: UserCardProps) => {
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
+  
+  const handleCardClick = useCallback(() => {
+    onUserClick(user.id);
+  }, [user.id, onUserClick]);
+
+  const handleFollowClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Safety check for user URL
+    if (!user.url) {
+      console.error('User URL is missing');
+      return;
+    }
+    
+    try {
+      const userUrl = new URL(user.url);
+      
+      // Safety check for currentUser
+      if (!currentUser?.handle) {
+        console.error('Current user handle is missing');
+        return;
+      }
+      
+      follow({
+        actorHandle: `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`,
+        userName: currentUser.handle,
+        activity: 'follow'
+      });
+      
+      // Call the onFollow callback
+      onFollow(user.id);
+    } catch (error) {
+      console.error('Error processing follow action:', error);
+    }
+  }, [user.url, user.id, currentUser?.handle, onFollow]);
+
+  const handleAvatarError = useCallback(() => {
+    setAvatarSrc("/default-avatar.png");
+  }, []);
   
   return (
     <div className="card clickable" onClick={handleCardClick}>
@@ -45,16 +69,16 @@ const UserCard = memo(({ user, isFollowing, isLoading, onUserClick }: UserCardPr
           <div className="avatar-container">
             <img
               src={avatarSrc}
-              alt={user.username}
+              alt={user.username || 'User avatar'}
               className="user-avatar-large"
-              onError={() => setAvatarSrc("/default-avatar.png")}
+              onError={handleAvatarError}
               loading="lazy"
             />
           </div>
 
           <div className="user-details">
             <div className="user-name-row">
-              <h3 className="user-display-name">{user.displayName}</h3>
+              <h3 className="user-display-name">{user.displayName || user.username}</h3>
             </div>
             <p className="username-text">@{user.username}</p>
             {user.bio && <p className="user-bio">{user.bio}</p>}
@@ -80,7 +104,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onUserClick }: UserCardPr
           {isFollowing ? (
             <>
               <UserCheck size={16} />
-              <span>unFollow</span>
+              <span>Unfollow</span>
             </>
           ) : (
             <>
@@ -94,8 +118,11 @@ const UserCard = memo(({ user, isFollowing, isLoading, onUserClick }: UserCardPr
   );
 });
 
+// Add display name for debugging
+UserCard.displayName = 'UserCard';
+
 const SearchUsersPage = () => {
-  const { user } = useAuth(); // Call useAuth at the top level
+  const { user } = useAuth();
   const [viewingProfile, setViewingProfile] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -105,17 +132,17 @@ const SearchUsersPage = () => {
   const previousQueryRef = useRef("");
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleUserClick = (userId: string) => {
-    const founduser = searchResults.find(u => u.id === userId);
-    if (founduser) {
-      console.log(founduser)
-      setViewingProfile(founduser);
+  const handleUserClick = useCallback((userId: string) => {
+    const foundUser = searchResults.find(u => u.id === userId);
+    if (foundUser) {
+      console.log(foundUser);
+      setViewingProfile(foundUser);
     }
-  };
+  }, [searchResults]);
 
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setViewingProfile(null);
-  };
+  }, []);
 
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -132,8 +159,9 @@ const SearchUsersPage = () => {
     
     try {
       const results = await userSearchService.searchUsers(query);
-      setSearchResults(results);
+      setSearchResults(Array.isArray(results) ? results : []);
     } catch (err) {
+      console.error('Search error:', err);
       setError(err instanceof Error ? err.message : "Failed to search users");
       setSearchResults([]);
     } finally {
@@ -142,6 +170,10 @@ const SearchUsersPage = () => {
   }, []);
 
   useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
     debounceTimerRef.current = setTimeout(() => {
       searchUsers(searchQuery);
     }, 500);
@@ -157,26 +189,42 @@ const SearchUsersPage = () => {
     const isCurrentlyFollowing = followingUsers.has(userId);
     
     try {
+      // Optimistically update UI
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         isCurrentlyFollowing ? newSet.delete(userId) : newSet.add(userId);
         return newSet;
       });
 
+      // Call API
       if (isCurrentlyFollowing) {
         await userSearchService.unfollowUser(userId);
       } else {
         await userSearchService.followUser(userId);
       }
     } catch (err) {
+      console.error('Follow/unfollow error:', err);
+      
+      // Revert optimistic update on error
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
         return newSet;
       });
+      
       setError(`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`);
     }
   }, [followingUsers]);
+
+  // Clear error after a delay
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   if (viewingProfile) {
     return (
@@ -199,8 +247,10 @@ const SearchUsersPage = () => {
             <p>Find and connect with amazing people</p>
           </div>
           <div className="user-info">
-            <div className="user-avatar">U</div>
-            <span className="username">{user?.handle}</span>
+            <div className="user-avatar">
+              {user?.handle ? user.handle.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <span className="username">{user?.handle || 'Guest'}</span>
           </div>
         </header>
 
@@ -219,7 +269,11 @@ const SearchUsersPage = () => {
           </div>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-message" role="alert">
+            {error}
+          </div>
+        )}
 
         {searchQuery && (
           <section className="mb-8">
@@ -246,12 +300,13 @@ const SearchUsersPage = () => {
               <div className="results-list">
                 {searchResults.map((user: any) => (
                   <UserCard
-                    key={user.id}
+                    key={user.id || user.username || Math.random()}
                     user={user}
                     isFollowing={followingUsers.has(user.id)}
                     isLoading={isLoading}
                     onFollow={handleFollow}
                     onUserClick={handleUserClick}
+                    currentUser={user} // Pass current user
                   />
                 ))}
               </div>
