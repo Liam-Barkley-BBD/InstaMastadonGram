@@ -84,7 +84,7 @@ export const findUserByHandle = async (handle: string): Promise<ActorDoc | null>
 };
 
 // Fuzzy search endpoint for local actors
-router.get('/search/actors', async (req, res) => {
+router.get('/actors', async (req, res) => {
     try {
         const { q, limit = 10 } = req.query;
 
@@ -158,7 +158,7 @@ router.get('/search/actors', async (req, res) => {
 });
 
 // Search endpoint that combines local search with WebFinger discovery
-router.get('/search/users', async (req, res) => {
+router.get('/users', async (req, res) => {
     try {
         const { q, includeRemote = 'true' } = req.query;
 

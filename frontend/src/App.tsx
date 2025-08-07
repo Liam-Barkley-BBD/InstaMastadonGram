@@ -7,7 +7,7 @@ import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
 import ExplorePage from "./pages/ExplorePage";
 import './App.css';
-import useAuth from "./services/user.service";
+import useAuth from "./services/auth.service";
 import { FedifyHandler } from "./fedify/fedify";
 
 function App() {

@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
-import { isCurrentUser } from '../services/user.service';
-import useAuth from '../services/user.service';
+import { isCurrentUser } from '../services/auth.service';
+import useAuth from '../services/auth.service';
+import { follow } from '../services/activities.service';
 
 interface Props {
   handle: string;
@@ -60,7 +61,7 @@ interface UserProfile {
 
 const ProfilePage = ({ handle, isProfileTab }: Props) => {
   const { user } = useAuth();
-  const isViewingOwnProfile = isCurrentUser(user?.handle as string);
+  const isViewingOwnProfile = isCurrentUser(user?.handle || '');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

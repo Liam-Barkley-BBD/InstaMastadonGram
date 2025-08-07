@@ -8,7 +8,7 @@ import ActivityModel from "../models/activity.model.ts";
 import mongoose from "mongoose";
 
 const router = Router();
-// router.use(isAuthenticated);
+router.use(isAuthenticated);
 
 router.get('/me', async (req, res) => {
   try {
@@ -23,7 +23,7 @@ router.get('/me', async (req, res) => {
   }
 })
 
-router.post('/:username/follow', async (req, res) => {
+router.post('/:username/following', async (req, res) => {
   const username = req.params.username;
   const handle = req.body.actor;
 
@@ -33,6 +33,7 @@ router.post('/:username/follow', async (req, res) => {
     method: 'GET',
     headers: { 'Accept': 'application/activity+json' }
   });
+
   const externalActorInformation = await externalActorResponse.json();
   
   if (typeof handle !== 'string') {
@@ -80,7 +81,7 @@ router.post('/:username/unfollow', async (req, res) => {
 
   const domainUsername = extractUsernameAndDomain(handle);
 
-  const externalActorResponse = await fetch(`https://${domainUsername?.domain}/users/${domainUsername?.username}`, {
+  const externalActorResponse = await fetch(`https://${domainUsername?.domain}users/${domainUsername?.username}`, {
     method: 'GET',
     headers: { 'Accept': 'application/activity+json' }
   });
