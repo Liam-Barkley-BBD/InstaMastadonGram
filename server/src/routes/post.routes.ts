@@ -14,23 +14,23 @@ import multer from "multer";
 
 const router = express.Router();
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: "uploads/",
-    filename: (req, file, cb) => {
-      cb(null, `${Date.now()}-${file.originalname}`);
+    storage: multer.diskStorage({
+        destination: "uploads/",
+        filename: (req, file, cb) => {
+            cb(null, `${Date.now()}-${file.originalname}`);
+        }
+    }),
+    limits: {
+        fileSize: 100 * 1024 * 1024, //100mb
     }
-  }),
-  limits: {
-    fileSize: 100 * 1024 * 1024, //100mb
-  }
 });
 
 // router.use(isAuthenticated);
 
 router.post("/:username", (req, res, next) => {
-  console.log("Incoming request before multer");
-  next();
-},  upload.single("media"), async (req, res) => {
+    console.log("Incoming request before multer");
+    next();
+}, upload.single("media"), async (req, res) => {
     console.log("Inside route handler after multer");
     const { username } = req.params;
     const { content } = req.body;
@@ -50,25 +50,31 @@ router.post("/:username", (req, res, next) => {
 
     // multer puts the file info on req.file
     if (req.file) {
-    try {
-        const mimeType = req.file.mimetype;
         const filePath = req.file.path;
+        try {
+            const mimeType = req.file.mimetype;
 
-        const allowedMimeTypes = ["image/png", "image/jpeg", "video/mp4"];
-        if (!allowedMimeTypes.includes(mimeType)) {
-        return res.status(400).json({ error: "Unsupported media type." });
+
+            const allowedMimeTypes = ["image/png", "image/jpeg", "video/mp4"];
+            if (!allowedMimeTypes.includes(mimeType)) {
+                return res.status(400).json({ error: "Unsupported media type." });
+            }
+
+            const fileBuffer = await fs.readFile(filePath);
+
+            mediaUrl = await uploadBufferToS3(fileBuffer, mimeType, "instamastadongram-media", `post-${username}`);
+
+
+        } catch (err) {
+            console.error("S3 upload failed:", err);
+            return res.status(500).json({ error: "Failed to upload media." });
+        } finally {
+            try {
+                await fs.unlink(filePath);
+            } catch (unlinkErr) {
+                console.warn(`Failed to delete temp file: ${filePath}`, unlinkErr);
+            }
         }
-
-        const fileBuffer = await fs.readFile(filePath);
-
-        mediaUrl = await uploadBufferToS3(fileBuffer, mimeType, "instamastadongram-media", `post-${username}`);
-
-        // optionally delete temp file after upload
-        await fs.unlink(filePath);
-    } catch (err) {
-        console.error("S3 upload failed:", err);
-        return res.status(500).json({ error: "Failed to upload media." });
-    }
     }
 
     const attachments: (Image | Video | Link)[] = [];
