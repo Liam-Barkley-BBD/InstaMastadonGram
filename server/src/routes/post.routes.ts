@@ -187,7 +187,7 @@ router.post("/:username", (req, res, next) => {
     });
 });
 
-router.get("/fediverse", async (req, res) => {
+router.get("/explore", async (req, res) => {
   try {
     const { page = 1, limit = 20, instance } = req.query;
     const pageNum = parseInt(page as string) || 1;

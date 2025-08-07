@@ -12,14 +12,14 @@ export interface PostsResponse {
   pagesLoaded: number;
 }
 
-export const fetchAllPosts = async (
+export const fetchExplorePage = async (
   page: number = 1,
   limit: number = 20,
   instance: string
 ): Promise<PostsResponse> => {
   try {
     const response = await fetch(
-      `${backendUrl}/api/posts/fediverse?page=${page}&limit=${limit}&instance=konnect.tevlen.co.za`,
+      `${backendUrl}/api/posts/explore?page=${page}&limit=${limit}&instance=${instance}`,
       {
         method: "GET",
         credentials: "include",

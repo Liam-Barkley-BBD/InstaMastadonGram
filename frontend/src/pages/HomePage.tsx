@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { MessageCircle } from "lucide-react";
 import "./styles/HomePage.css";
 import type { Post } from "../types/Post";
-import { fetchAllPosts, formatTimestamp } from "../services/post.service";
+import { fetchExplorePage, formatTimestamp } from "../services/post.service";
 import LinkPreviewComponent from "../components/LinkPreview";
 import MediaGrid from "../components/MediaGrid";
 import { extractLinks } from "../utils/linkUtils";
@@ -30,7 +30,7 @@ const HomePage: React.FC = () => {
         }
 
         const fedify = new FedifyHandler()  
-        const response = await fetchAllPosts(
+        const response = await fetchExplorePage(
           pageNum,
           20,
           fedify.extractDomain(useAuth().user.handle)
