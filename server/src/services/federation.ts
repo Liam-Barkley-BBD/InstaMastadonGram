@@ -1,4 +1,4 @@
-import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient, isActor } from "@fedify/fedify";
+import { Accept, Create, createFederation, Endpoints, Follow, getActorHandle, importJwk, PUBLIC_COLLECTION, Person, Undo, Note, type Recipient, isActor, Image, Video, Link } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { MemoryKvStore, InProcessMessageQueue } from "@fedify/fedify";
 import { findUserByHandle } from "./actor.service.ts";
@@ -21,7 +21,7 @@ const federation = createFederation({
 
 // Actor dispatcher
 federation
-  .setActorDispatcher("/users/{identifier}", async (ctx, identifier) => {
+  .setActorDispatcher("/api/users/{identifier}", async (ctx, identifier) => {
     const actor = await findUserByHandle(identifier);
 
     if (!actor) return null;
@@ -81,7 +81,7 @@ federation
 
 // Inbox dispatcher
 federation
-  .setInboxListeners("/users/{identifier}/inbox", "/inbox")
+  .setInboxListeners("/api/users/{identifier}/inbox", "/inbox")
 
   /* Follow activity */
   .on(Follow, async (ctx, follow) => {
@@ -264,7 +264,7 @@ federation
   });
 
 federation
-  .setFollowersDispatcher("/users/{identifier}/followers", async (ctx, identifier, cursor) => {
+  .setFollowersDispatcher("/api/users/{identifier}/followers", async (ctx, identifier, cursor) => {
       const PAGE_SIZE = 10;
 
       if (cursor == null) return null;
@@ -315,7 +315,7 @@ federation
 federation
   .setObjectDispatcher(
     Note,
-    "/users/{identifier}/posts/{id}",
+    "/api/users/{identifier}/posts/{id}",
     async (ctx, values) => {
 
       const post = await Post.findOne({ _id: values.id }).populate({
@@ -341,7 +341,7 @@ federation
 federation.
   setObjectDispatcher(
     Accept,
-    "/users/{identifier}/accepts/{id}",
+    "/api/users/{identifier}/accepts/{id}",
     async (ctx, { identifier, id }) => {
       const activity = await ActivityModel.findById(id);
       if (!activity || activity.type !== "Accept") return null;
@@ -355,10 +355,13 @@ federation.
     }
   );
 
+const window = 20;
+
 federation
   .setOutboxDispatcher(
-    "/users/{identifier}/outbox",
+    "/api/users/{identifier}/outbox",
     async (ctx, identifier, cursor) => {
+      if (cursor === null) return null; // defer to pagination (required by Fedify)
 
       const actor = await Actor.findOne({ handle: identifier });
       if (!actor) {
@@ -366,9 +369,11 @@ federation
         return { items: [] };
       }
 
+      const offset = parseInt(cursor || "0", 10);
       const posts = await Post.find({ actor: actor._id })
         .sort({ created: -1 })
-        .limit(20);
+        .skip(offset)
+        .limit(window);
 
       const to = PUBLIC_COLLECTION;
       const cc = ctx.getFollowersUri(identifier);
@@ -379,6 +384,32 @@ federation
           id: post._id.toString(),
         });
 
+      const attachments: (Image | Video | Link)[] = (post.attachments || []).map((a) => {
+        switch (a.type) {
+          case "Image":
+            if (!a.url) throw new Error("Missing url for Image attachment");
+            return new Image({
+              mediaType: a.mediaType,
+              url: new URL(a.url),
+            });
+          case "Video":
+            if (!a.url) throw new Error("Missing url for Video attachment");
+            return new Video({
+              mediaType: a.mediaType,
+              url: new URL(a.url),
+            });
+          case "Link":
+            if (!a.href) throw new Error("Missing href for Link attachment");
+            return new Link({
+              mediaType: a.mediaType,
+              href: new URL(a.href),
+            });
+          default:
+            return null;
+        }
+      }).filter((a): a is Image | Video | Link => a !== null);
+
+
         const note = new Note({
           id: noteId,
           attribution: ctx.getActorUri(identifier),
@@ -388,6 +419,7 @@ federation
           mediaType: "text/html",
           published: Temporal.Instant.from(post.created.toISOString()),
           url: noteId,
+          attachments,
         });
 
         const createId = ctx.getObjectUri(Create, {
@@ -405,18 +437,35 @@ federation
         });
       });
 
+      const nextCursor = posts.length === window ? (offset + window).toString() : null;
+
       return {
         items: activities,
-        cursor: null,
+        nextCursor,
+        prevCursor: offset > 0 ? Math.max(offset - window, 0).toString() : null,
       };
     }
-  );
+  )
+  .setFirstCursor(async (ctx, identifier) => "0")
+  .setLastCursor(async (ctx, identifier) => {
+    const actor = await Actor.findOne({ handle: identifier });
+    if (!actor) return null;
+
+    const total = await Post.countDocuments({ actor: actor._id });
+    return (total - (total % window)).toString();
+  })
+  .setCounter(async (ctx, identifier) => {
+    const actor = await Actor.findOne({ handle: identifier });
+    if (!actor) return 0;
+
+    return await Post.countDocuments({ actor: actor._id });
+  });
 
 
 federation
   .setObjectDispatcher(
     Create,
-    "/users/{identifier}/creates/{id}",
+    "/api/users/{identifier}/creates/{id}",
     async (ctx, { identifier, id }) => {
       // implement logic to fetch and return the Create activity
       return null;

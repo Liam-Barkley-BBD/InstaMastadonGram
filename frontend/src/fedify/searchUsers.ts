@@ -24,7 +24,7 @@ class UserSearchService {
       );
 
       // Process local and remote results
-      const processedResults: UserProfile[] = [];
+      let processedResults: UserProfile[] = [];
       
       // Process local results
       if (response.local && response.local.length > 0) {
@@ -32,17 +32,14 @@ class UserSearchService {
           const profile = await this.fedify.getProfile(this.fedify.extractUsername(localUser.handle));
           processedResults.push(profile);
         }
-      }
-      
-      // Process remote result (if exists)
-      if (response.remote) {
-        const remoteProfile = await this.fedify.getProfile(this.fedify.extractUsername(response.remote.handle));
+      }  else if (response.remote) {
+        const remoteProfile = await this.fedify.getProfile(undefined, response.remote.uri);
         processedResults.push(remoteProfile);
-      }
-
-      if (!response.remote || !(response.local && response.local.length > 0)){
+      } else if (!response.remote || !(response.local && response.local.length > 0)){
         const profile = await this.fedify.getProfile(query);
         processedResults.push(profile);
+      } else {
+        processedResults = []
       }
 
       return processedResults;

@@ -1,21 +1,32 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
-import { Search, UserPlus, UserCheck, MapPin, Users2 } from "lucide-react";
+import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
 import type { UserProfile } from "../types";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
+import ProfilePage from "./ProfilePage";
 
 interface UserCardProps {
   user: UserProfile;
   isFollowing: boolean;
   isLoading: boolean;
   onFollow: (userId: string) => void;
+  onUserClick: (userId: string) => void;
 }
 
-const UserCard = memo(({ user, isFollowing, isLoading, onFollow }: UserCardProps) => {
+const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
+  const handleCardClick = () => {
+    onUserClick(user.id);
+  };
+
+  const handleFollowClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onFollow(user.id);
+  };
+
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
 
   return (
-    <div className="card">
+    <div className="card clickable" onClick={handleCardClick}>
       <div className="user-card-content">
         <div className="user-info-section">
           <div className="avatar-container">
@@ -48,7 +59,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow }: UserCardProps
         </div>
 
         <button
-          onClick={() => onFollow(user.id)}
+          onClick={handleFollowClick}
           className={`follow-btn ${isFollowing ? "follow-btn-following" : "follow-btn-follow"}`}
           disabled={isLoading}
           aria-label={isFollowing ? `Unfollow ${user.username}` : `Follow ${user.username}`}
@@ -71,6 +82,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow }: UserCardProps
 });
 
 const SearchUsersPage = () => {
+  const [viewingProfile, setViewingProfile] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
@@ -78,6 +90,17 @@ const SearchUsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
   const debounceTimerRef = useRef<NodeJS.Timeout>();
+
+  const handleUserClick = (userId: string) => {
+    const user = searchResults.find(u => u.id === userId);
+    if (user) {
+      setViewingProfile(user.username);
+    }
+  };
+
+  const handleBackToList = () => {
+    setViewingProfile(null);
+  };
 
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -119,7 +142,6 @@ const SearchUsersPage = () => {
     const isCurrentlyFollowing = followingUsers.has(userId);
     
     try {
-      // Optimistic update
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         isCurrentlyFollowing ? newSet.delete(userId) : newSet.add(userId);
@@ -132,7 +154,6 @@ const SearchUsersPage = () => {
         await userSearchService.followUser(userId);
       }
     } catch (err) {
-      // Revert on error
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
@@ -141,6 +162,18 @@ const SearchUsersPage = () => {
       setError(`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`);
     }
   }, [followingUsers]);
+
+  if (viewingProfile) {
+    return (
+      <div className="profile-view-container">
+        <button className="back-to-list-btn" onClick={handleBackToList}>
+  <span className="back-arrow">←</span>
+  Back to list
+</button>
+        <ProfilePage handle={viewingProfile} isProfileTab = {false}/>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
@@ -197,14 +230,14 @@ const SearchUsersPage = () => {
             ) : searchResults.length > 0 ? (
               <div className="results-list">
                 {searchResults.map((user) => (
-                  <div key={user.id} className="clickable">
-                    <UserCard
-                      user={user}
-                      isFollowing={followingUsers.has(user.id)}
-                      isLoading={isLoading}
-                      onFollow={handleFollow}
-                    />
-                  </div>
+                  <UserCard
+                    key={user.id}
+                    user={user}
+                    isFollowing={followingUsers.has(user.id)}
+                    isLoading={isLoading}
+                    onFollow={handleFollow}
+                    onUserClick={handleUserClick}
+                  />
                 ))}
               </div>
             ) : (
