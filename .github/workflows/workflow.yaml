@@ -320,6 +320,7 @@ jobs:
   issue-certificates:
     needs:
       - deploy-api
+      - deploy-frontend
       - terraform
     permissions:
       id-token: write
