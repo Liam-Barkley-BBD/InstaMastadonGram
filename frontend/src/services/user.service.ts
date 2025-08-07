@@ -53,7 +53,7 @@ export default function useAuth() {
   }
 
 
-  return { user:{handle:"liambarkley@mastodon.social", inboxUrl:"https://mastodon.social/users/liambarkley/inbox"}, authLoading:false };
+  return { user, authLoading };
 }
 
 export function isCurrentUser(handle:string){
