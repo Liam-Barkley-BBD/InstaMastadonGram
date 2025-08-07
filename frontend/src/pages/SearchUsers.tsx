@@ -19,22 +19,27 @@ function removeForwardSlashes(str: string) {
   return str.replace(/\//g, '');
 }
 
-const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
+const UserCard = memo(({ user, isFollowing, isLoading, onUserClick }: UserCardProps) => {
   const handleCardClick = () => {
     onUserClick(user.id);
   };
 
   const handleFollowClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onFollow(user.id);
+    follow({
+      actorHandle: `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`,
+      userName: JSON.parse(localStorage.getItem('user') || '').handle,
+      activity: 'follow'
+    });
   };
 
   const userUrl = new URL(user.url);
   console.log(user)
 
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
+  
   return (
-    <div className="card clickable">
+    <div className="card clickable" onClick={handleCardClick}>
       <div className="user-card-content">
         <div className="user-info-section">
           <div className="avatar-container">
@@ -67,18 +72,12 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
         </div>
 
         <button
-          onClick={ () => {
-            follow({
-                    actorHandle: `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`,
-                    userName: JSON.parse(localStorage.getItem('user') || '').handle,
-                    activity: 'follow'
-                  })
-                }}
+          onClick={handleFollowClick}
           className={`follow-btn ${isFollowing ? "follow-btn-following" : "follow-btn-follow"}`}
           disabled={isLoading}
           aria-label={isFollowing ? `Unfollow ${user.username}` : `Follow ${user.username}`}
         >
-          {  isFollowing ? (
+          {isFollowing ? (
             <>
               <UserCheck size={16} />
               <span>unFollow</span>
@@ -97,19 +96,20 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
 
 const SearchUsersPage = () => {
   const { user } = useAuth(); // Call useAuth at the top level
-  const [viewingProfile, setViewingProfile] = useState<string | null>(null);
+  const [viewingProfile, setViewingProfile] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
-const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleUserClick = (userId: string) => {
-    const user = searchResults.find(u => u.id === userId);
-    if (user) {
-      setViewingProfile(user.username);
+    const founduser = searchResults.find(u => u.id === userId);
+    if (founduser) {
+      console.log(founduser)
+      setViewingProfile(founduser);
     }
   };
 
@@ -182,10 +182,10 @@ const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     return (
       <div className="profile-view-container">
         <button className="back-to-list-btn" onClick={handleBackToList}>
-  <span className="back-arrow">←</span>
-  Back to list
-</button>
-        <ProfilePage handle={viewingProfile} isProfileTab = {false}/>
+          <span className="back-arrow">←</span>
+          Back to list
+        </button>
+        <ProfilePage handle={viewingProfile.id} isProfileTab={false}/>
       </div>
     );
   }
@@ -244,7 +244,7 @@ const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
               </div>
             ) : searchResults.length > 0 ? (
               <div className="results-list">
-                {searchResults.map((user:any) => (
+                {searchResults.map((user: any) => (
                   <UserCard
                     key={user.id}
                     user={user}
