@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, X, Image, Video, Camera, Smile } from "lucide-react";
 import "./styles/Uploadpage.css";
-import { isCurrentUser } from "../services/user.service";
+// import { isCurrentUser } from "../services/user.service";
 import useAuth from "../services/user.service";
 
 type SelectedFile = {
@@ -16,7 +16,9 @@ const UploadMediaPage = () => {
   const [caption, setCaption] = useState<string>("");
   const [, setShowAdvanced] = useState<boolean>(false);
   const [location, setLocation] = useState<string>("");
-  const [taggedUsers, setTaggedUsers] = useState([]);
+  const [
+    // taggedUsers
+    , setTaggedUsers] = useState([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
 

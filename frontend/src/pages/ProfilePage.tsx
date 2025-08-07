@@ -55,9 +55,9 @@ interface UserProfile {
 
 const ProfilePage = ({ handle, isProfileTab }: Props) => {
   const { user } = useAuth();
-  const isViewingOwnProfile = isCurrentUser(user?.handle);
+  const isViewingOwnProfile = isCurrentUser(user?.handle as string);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +77,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
         setLoading(true);
         setError(null);
 
-        const profileData: UserProfile = await fedifyHandler.current.getProfile(handle);
+        const profileData: any = await fedifyHandler.current.getProfile(handle);
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
