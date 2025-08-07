@@ -80,7 +80,6 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
         setError(null);
 
         const profileData: any = await fedifyHandler.current.getProfile(undefined,handle);
-        console.log(profileData)
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
