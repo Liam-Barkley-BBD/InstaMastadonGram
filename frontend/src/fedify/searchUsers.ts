@@ -17,7 +17,7 @@ class UserSearchService {
     try {
       // Call your backend search endpoint
       const response = await this.fedify.makeRequest(
-        `http://localhost:8000/api/search/search/users?q=${encodeURIComponent(query)}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/search/search/users?q=${encodeURIComponent(query)}`,
         {},
         0,
         false
