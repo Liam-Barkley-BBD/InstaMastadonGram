@@ -129,6 +129,13 @@ export class FedifyHandler {
         return handle;
         }
 
+    extractDomain(handle:string):string {
+        if (handle.includes('@')) {
+            return handle.split('@')[1];
+        }
+        return handle;
+    }
+
     private extractUsernameFromUrl(url: string): string {
         try {
             const urlObj = new URL(url);

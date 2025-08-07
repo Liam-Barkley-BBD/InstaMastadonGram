@@ -1,10 +1,11 @@
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Home, Search, Plus, User } from 'lucide-react';
+import { Home, Search, Plus, User, Globe } from 'lucide-react';
 import HomePage from "./pages/HomePage";
 import Login from './pages/LoginPage';
 import ProfilePage from "./pages/ProfilePage";
 import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
+import ExplorePage from "./pages/ExplorePage";
 import './App.css';
 import useAuth from "./services/user.service";
 import { FedifyHandler } from "./fedify/fedify";
@@ -17,6 +18,7 @@ function App() {
 
   const sidebarItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/' },
+    { id: 'explore', icon: Globe, label: 'Explore', path: '/explore' },
     { id: 'search', icon: Search, label: 'Search', path: '/search' },
     { id: 'create', icon: Plus, label: 'Create', path: '/create' },
     { id: 'profile', icon: User, label: 'Profile', path: '/me' }
@@ -74,6 +76,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)} isProfileTab = {true}/>} />
+            <Route path="/explore" element={<ExplorePage domain = {fedify.extractDomain(user?.handle)} />} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
           </Routes>
