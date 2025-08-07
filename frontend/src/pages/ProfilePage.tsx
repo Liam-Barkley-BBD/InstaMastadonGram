@@ -62,7 +62,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
   const { user } = useAuth();
   const isViewingOwnProfile = isCurrentUser(user?.handle as string);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [error, setError] = useState<string | null>(null);
