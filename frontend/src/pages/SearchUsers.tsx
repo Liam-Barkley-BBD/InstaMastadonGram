@@ -30,7 +30,6 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
   };
 
   const userUrl = new URL(user.url);
-  console.log(user)
 
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
   return (
