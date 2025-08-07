@@ -473,7 +473,7 @@ federation
   );
 
 federation
-  .setFollowingDispatcher("/users/{identifier}/following", async (ctx, identifier, cursor) => {
+  .setFollowingDispatcher("/api/users/{identifier}/following", async (ctx, identifier, cursor) => {
       const PAGE_SIZE = 10;
       if (cursor == null) return null;
       
@@ -511,7 +511,7 @@ federation
     const followingActor = await Actor.findOne({ handle: identifier });
     if (!followingActor) return 0;
 
-    const count = await FollowModel.countDocuments({ following: followingActor._id });
+    const count = await FollowModel.countDocuments({ follower: followingActor._id });
     return count;
   });
 
