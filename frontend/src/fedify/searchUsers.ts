@@ -62,9 +62,29 @@ class UserSearchService {
     }
   }
 
+async addRecentSearch(handle: string, profile: string): Promise<{ message: string }> {
+  try {
+    const response = await this.fedify.makeRequest(`http://localhost:8000/api/search/recent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        handle,
+        profile
+      })
+    }, 0, false);
+
+    return response;
+  } catch (error) {
+    console.error("Failed to add recent search:", error);
+    throw new Error("Failed to save recent search. Please try again.");
+  }
+}
+
   async getRecentSearches(handle:string): Promise<{ recent_searches: string[], count: number }> {
     try {
-      const response = await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/search/recent?handle=${handle}`, {
+      const response = await this.fedify.makeRequest(`http://localhost:8000/api/search/search/recent?handle=${handle}`, {
         method: 'GET'
       }, 0, false);
       return response;
@@ -73,6 +93,7 @@ class UserSearchService {
       throw new Error("Failed to load recent searches. Please try again.");
     }
   }
+
 
   async clearRecentSearches(handle:string): Promise<void> {
     try {

@@ -15,10 +15,7 @@ interface UserCardProps {
 }
 
 const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
-  const handleCardClick = () => {
-    onUserClick(user.id);
-  };
-
+  const handleCardClick = () => onUserClick(user.id);
   const handleFollowClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onFollow(user.id);
@@ -83,39 +80,37 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
 });
 
 const SearchUsersPage = () => {
-  const [recentSearches, setRecentSearches] = useState<any[]>()
-  const [viewingProfile, setViewingProfile] = useState<string | null>(null);
+  const { handle } = useAuth().user;
+  const [recentSearches, setRecentSearches] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
+  const [viewingProfile, setViewingProfile] = useState<UserProfile |string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
   const debounceTimerRef = useRef<NodeJS.Timeout>();
 
-  useEffect(() => {
-  const loadRecentSearches = async () => {
+  const loadRecentSearches = useCallback(async () => {
     try {
-      const recent = await userSearchService.getRecentSearches(useAuth().user.handle);
-      setRecentSearches(recent.recent_searches.map(item => item.query || item)); // Handle both string and object formats
+      const recent = await userSearchService.getRecentSearches(handle);
+      const parsed = recent.recent_searches.map(item => JSON.parse(JSON.parse(item)));
+      setRecentSearches(parsed);
     } catch (error) {
-      console.warn('Failed to load recent searches:', error);
+      console.warn("Failed to load recent searches:", error);
     }
-  };
+  }, [handle]);
 
-  loadRecentSearches();
-}, []);
+  useEffect(() => {
+    loadRecentSearches();
+  }, [loadRecentSearches]);
 
   const handleUserClick = (userId: string) => {
-    const user = searchResults.find(u => u.id === userId);
-    if (user) {
-      setViewingProfile(user.username);
-    }
+    const user = [...searchResults, ...recentSearches].find(u => u.id === userId);
+    if (user) setViewingProfile(user);
   };
 
-  const handleBackToList = () => {
-    setViewingProfile(null);
-  };
+  const handleBackToList = () => setViewingProfile(null);
 
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -129,9 +124,10 @@ const SearchUsersPage = () => {
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const results = await userSearchService.searchUsers(query);
+      results.forEach(result => userSearchService.addRecentSearch(handle, JSON.stringify(result)));
       setSearchResults(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to search users");
@@ -139,42 +135,34 @@ const SearchUsersPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [handle]);
 
   useEffect(() => {
     debounceTimerRef.current = setTimeout(() => {
       searchUsers(searchQuery);
     }, 500);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
+    return () => clearTimeout(debounceTimerRef.current);
   }, [searchQuery, searchUsers]);
 
   const handleFollow = useCallback(async (userId: string) => {
-    const isCurrentlyFollowing = followingUsers.has(userId);
-    
-    try {
-      setFollowingUsers(prev => {
-        const newSet = new Set(prev);
-        isCurrentlyFollowing ? newSet.delete(userId) : newSet.add(userId);
-        return newSet;
-      });
+    const isFollowing = followingUsers.has(userId);
+    setFollowingUsers(prev => {
+      const updated = new Set(prev);
+      isFollowing ? updated.delete(userId) : updated.add(userId);
+      return updated;
+    });
 
-      if (isCurrentlyFollowing) {
-        await userSearchService.unfollowUser(userId);
-      } else {
-        await userSearchService.followUser(userId);
-      }
+    try {
+      isFollowing
+        ? await userSearchService.unfollowUser(userId)
+        : await userSearchService.followUser(userId);
     } catch (err) {
       setFollowingUsers(prev => {
-        const newSet = new Set(prev);
-        isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
-        return newSet;
+        const reverted = new Set(prev);
+        isFollowing ? reverted.add(userId) : reverted.delete(userId);
+        return reverted;
       });
-      setError(`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`);
+      setError(`Failed to ${isFollowing ? "unfollow" : "follow"} user`);
     }
   }, [followingUsers]);
 
@@ -182,15 +170,15 @@ const SearchUsersPage = () => {
     return (
       <div className="profile-view-container">
         <button className="back-to-list-btn" onClick={handleBackToList}>
-  <span className="back-arrow">←</span>
-  Back to list
-</button>
-        <ProfilePage handle={viewingProfile} isProfileTab = {false}/>
+          <span className="back-arrow">←</span>
+          Back to list
+        </button>
+        <ProfilePage handle={viewingProfile} isProfileTab={false} preloadedData = {viewingProfile}/>
       </div>
     );
   }
 
-  
+  const resultsToShow = searchQuery ? searchResults : recentSearches;
 
   return (
     <div className="page-container">
@@ -223,59 +211,11 @@ const SearchUsersPage = () => {
 
         {error && <div className="error-message">{error}</div>}
 
-        {/* Recent Searches Section - Show when no search query */}
-{!searchQuery && recentSearches?.length > 0 && (
-  <section className="mb-8">
-    <div className="recent-searches-header">
-      <h2 className="section-title mb-4">
-        <Clock size={18} className="inline mr-2" />
-        Recent searches
-      </h2>
-      <button onClick={clearRecentSearches} className="clear-all-btn">
-        Clear all
-      </button>
-    </div>
-    
-    <div className="results-list">
-      {recentSearches.map((query, index) => (
-        <div key={index} className="card clickable recent-search-card" onClick={() => handleRecentSearchClick(query)}>
-          <div className="user-card-content">
-            <div className="user-info-section">
-              <div className="avatar-container">
-                <div className="recent-search-avatar">
-                  <Search size={24} className="search-icon-avatar" />
-                </div>
-              </div>
-              
-              <div className="user-details">
-                <div className="user-name-row">
-                  <h3 className="user-display-name">{query}</h3>
-                </div>
-                <p className="username-text">Recent search</p>
-              </div>
-            </div>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removeRecentSearch(query);
-              }}
-              className="remove-search-btn"
-              aria-label={`Remove ${query} from recent searches`}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  </section>
-)}
-
-        {searchQuery && (
+        {(resultsToShow.length > 0 || isLoading) && (
           <section className="mb-8">
             <h2 className="section-title mb-4">
-              {isLoading ? "Searching..." : `Results (${searchResults.length})`}
+              {searchQuery ? "Search Results" : "Recent Searches"}
+              {isLoading && " (Loading...)"}
             </h2>
 
             {isLoading ? (
@@ -293,9 +233,9 @@ const SearchUsersPage = () => {
                   </div>
                 ))}
               </div>
-            ) : searchResults.length > 0 ? (
+            ) : (
               <div className="results-list">
-                {searchResults.map((user) => (
+                {resultsToShow.map((user) => (
                   <UserCard
                     key={user.id}
                     user={user}
@@ -306,18 +246,18 @@ const SearchUsersPage = () => {
                   />
                 ))}
               </div>
-            ) : (
-              <div className="card empty-state">
-                <div className="empty-icon">
-                  <Search size={32} style={{ color: "#9ca3af" }} />
-                </div>
-                <p className="empty-title">No users found</p>
-                <p className="empty-description">
-                  Try different search terms
-                </p>
-              </div>
             )}
           </section>
+        )}
+
+        {!isLoading && resultsToShow.length === 0 && (
+          <div className="card empty-state">
+            <div className="empty-icon">
+              <Search size={32} style={{ color: "#9ca3af" }} />
+            </div>
+            <p className="empty-title">No users found</p>
+            <p className="empty-description">Try different search terms</p>
+          </div>
         )}
       </div>
     </div>

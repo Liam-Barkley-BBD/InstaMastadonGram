@@ -5,8 +5,9 @@ import { isCurrentUser } from '../services/user.service';
 import useAuth from '../services/user.service';
 
 interface Props {
-  handle: string;
+  handle: UserProfile;
   isProfileTab:boolean;
+  preloadedData?:any
 }
 
 interface User {
@@ -53,7 +54,7 @@ interface UserProfile {
   postsCount: number;
 }
 
-const ProfilePage = ({ handle, isProfileTab }: Props) => {
+const ProfilePage = ({ handle, isProfileTab, preloadedData}: Props) => {
   const { user } = useAuth();
   const isViewingOwnProfile = isCurrentUser(user?.handle);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -76,8 +77,9 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
       try {
         setLoading(true);
         setError(null);
+        console.log("preloadeddata",preloadedData)
 
-        const profileData: UserProfile = await fedifyHandler.current.getProfile(handle);
+        const profileData: any = preloadedData?preloadedData:await fedifyHandler.current.getProfile(handle);
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);

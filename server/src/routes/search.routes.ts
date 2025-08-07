@@ -167,6 +167,26 @@ router.get('/search/recent', async (req, res) => {
     }
 });
 
+// Add a search to user's recent searches
+router.post('/recent', async (req, res) => {
+    try {
+        const { handle, profile } = req.body;
+
+        if (!handle || !profile) {
+            return res.status(400).json({ error: 'Missing handle or searchTerm' });
+        }
+
+        await addToRecentSearches(handle, JSON.stringify(profile));
+
+        res.status(201).json({ message: 'Search term added to recent searches' });
+
+    } catch (error) {
+        console.error('Error adding to recent searches:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // Clear user's recent searches
 router.delete('/search/recent', async (req, res) => {
     try {
@@ -265,7 +285,7 @@ router.get('/search/actors', async (req, res) => {
 router.get('/search/users', async (req, res) => {
     try {
         const { q, includeRemote = 'true' } = req.query;
-        const handle = "liam"; // Assuming you have user authentication middleware
+        const user:any  = req.user; // Assuming you have user authentication middleware
 
         if (!q || typeof q !== 'string') {
             return res.status(400).json({ error: 'Query parameter "q" is required' });
@@ -365,7 +385,7 @@ router.get('/search/users', async (req, res) => {
 
         results.total = results.local.length + (results.remote ? 1 : 0);
         console.log("ADDING")
-        await addToRecentSearches(handle as string, JSON.stringify(results));
+        await addToRecentSearches(user?.handle as string, JSON.stringify(results));
         
 
         res.json(results);
