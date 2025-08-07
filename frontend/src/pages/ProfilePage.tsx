@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
-import { follow } from '../services/activities.service';
+// import { follow } from '../services/activities.service';
 import { isCurrentUser } from '../services/user.service';
 import useAuth from '../services/user.service';
 import PostModal from '../components/PostModal';
@@ -79,7 +79,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
         setLoading(true);
         setError(null);
 
-        const profileData: any = await fedifyHandler.current.getProfile(handle);
+        const profileData: any = await fedifyHandler.current.getProfile(undefined,handle);
         console.log(profileData)
         setProfile(profileData);
         setPosts(profileData.posts || []);
