@@ -97,6 +97,7 @@ jobs:
       id-token: write
       contents: read
     needs:
+      - deploy-frontend
       - build-api
       - terraform
       - setup-databases
@@ -179,6 +180,7 @@ jobs:
       contents: read
     needs:
       - terraform
+      - deploy-frontend
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
