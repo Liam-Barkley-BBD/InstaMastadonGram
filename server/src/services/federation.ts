@@ -25,7 +25,6 @@ federation
     const actor = await findUserByHandle(identifier);
 
     if (!actor) return null;
-    else console.log("Found user!")
 
     const keys = await ctx.getActorKeyPairs(identifier);
 
@@ -204,8 +203,6 @@ federation
     if (to?.type !== "actor") return;
 
     const recipient = to.identifier;
-    // Do something with the recipient
-    console.log(`Received Create Activity from recipient: ${recipient}`);
   })
 
   .on(Accept, async (ctx, accept) => {
@@ -473,7 +470,7 @@ federation
   );
 
 federation
-  .setFollowingDispatcher("/users/{identifier}/following", async (ctx, identifier, cursor) => {
+  .setFollowingDispatcher("/api/users/{identifier}/following", async (ctx, identifier, cursor) => {
       const PAGE_SIZE = 10;
       if (cursor == null) return null;
       
@@ -511,7 +508,7 @@ federation
     const followingActor = await Actor.findOne({ handle: identifier });
     if (!followingActor) return 0;
 
-    const count = await FollowModel.countDocuments({ following: followingActor._id });
+    const count = await FollowModel.countDocuments({ follower: followingActor._id });
     return count;
   });
 
