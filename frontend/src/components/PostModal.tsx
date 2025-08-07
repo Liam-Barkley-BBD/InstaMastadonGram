@@ -52,10 +52,22 @@ const extractTextContent = (content: string | PostContent[]): string => {
   return '';
 };
 
-const getImageContent = (content: string | PostContent[]): PostContent | null => {
+const getImageContent = (content: string | PostContent[] | PostContent): PostContent | null => {
   if (Array.isArray(content)) {
-    return content.find(item => item.type === 'Document' && item.mediaType?.startsWith('image/')) || null;
+    return content.find(item => 
+      (item.type === 'Image' || item.type === 'Document') && 
+      item.mediaType?.startsWith('image/')
+    ) || null;
   }
+  
+  // Handle single PostContent object
+  if (typeof content === 'object' && content !== null) {
+    if ((content.type === 'Image' || content.type === 'Document') && 
+        content.mediaType?.startsWith('image/')) {
+      return content;
+    }
+  }
+  
   return null;
 };
 
@@ -85,7 +97,9 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, post, profile, onClose })
   if (!isOpen || !post || !profile) return null;
 
   const textContent = extractTextContent(post.textcontent || '');
+  console.log(textContent)
   const imageContent = getImageContent(post.imagecontent || []);
+  console.log(imageContent)
 
   return (
     <div className="post-modal-overlay" onClick={onClose}>

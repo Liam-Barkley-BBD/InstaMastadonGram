@@ -1,4 +1,4 @@
-/* Base styles from your original CSS */
+Base styles from your original CSS
 .main-content:has(.profile-page) .main-content-inner,
 .main-content-inner.profile-container {
   max-width: none !important;
@@ -406,6 +406,10 @@ body.profile-view .main-content-inner {
 /* Modal image layouts */
 .post-modal-images {
   width: 100%;
+  .post-modal- img {
+  max-width: 10px;
+  height: auto;
+}
 }
 
 .single-modal-image {
@@ -870,4 +874,11 @@ body.profile-view .main-content-inner {
   .modal-image-item {
     min-height: 100px;
   }
+}
+
+
+.post-modal-image img {
+  max-width: 100%;
+  max-height: 50%; /* or whatever maximum height you prefer */
+  object-fit: contain; /* ensures the whole image is visible */
 }

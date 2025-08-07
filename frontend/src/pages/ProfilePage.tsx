@@ -161,40 +161,84 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
     setSelectedPost(null);
   };
 
-  const renderPostContent = (content: string | PostContent[]) => {
-    if (typeof content === 'string') {
+const renderPostContent = (
+  textContent: string | PostContent[] | PostContent, 
+  imageContent: string | PostContent[] | PostContent
+) => {
+  return (
+    <div className="post-content">
+      {/* Render text content */}
+      {textContent && (
+        <div className="post-text">
+          {typeof textContent === 'string' ? (
+            <p>{textContent.replace(/<[^>]*>/g, '')}</p>
+          ) : (
+            <p>Text content available</p>
+          )}
+        </div>
+      )}
+
+      {/* Render image content */}
+      {renderImageContent(imageContent)}
+    </div>
+  );
+};
+
+const renderImageContent = (imageContent: string | PostContent[] | PostContent) => {
+  // Handle single PostContent object
+  if (typeof imageContent === 'object' && imageContent !== null && !Array.isArray(imageContent)) {
+    if ((imageContent.type === 'Document' || imageContent.type === 'Image') && imageContent.mediaType?.startsWith('image/')) {
       return (
-        <div className="post-content">
-          <div className="post-text">
-            <p>{content.replace(/<[^>]*>/g, '')}</p>
-          </div>
+        <div className="post-image">
+          <img 
+            src={imageContent.url} 
+            alt={imageContent.name || 'Post image'} 
+            loading="lazy"
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxHeight: '400px',
+              objectFit: 'contain',
+              borderRadius: '8px'
+            }}
+          />
         </div>
       );
     }
-
-    if (Array.isArray(content)) {
-      return (
-        <div className="post-content">
-          {content.map((item, index) => {
-            if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
-              return (
-                <div key={index} className="post-image">
-                  <img 
-                    src={item.url} 
-                    alt={item.name || 'Post image'} 
-                    loading="lazy"
-                  />
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      );
-    }
-
     return null;
-  };
+  }
+
+  // Handle array of PostContent objects
+  if (Array.isArray(imageContent)) {
+    return (
+      <>
+        {imageContent.map((item, index) => {
+          if ((item.type === 'Document' || item.type === 'Image') && item.mediaType?.startsWith('image/')) {
+            return (
+              <div key={index} className="post-image">
+                <img 
+                  src={item.url} 
+                  alt={item.name || 'Post image'} 
+                  loading="lazy"
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '400px',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                />
+              </div>
+            );
+          }
+          return null;
+        })}
+      </>
+    );
+  }
+
+  return null;
+};
 
   if (loading) {
     return (
@@ -315,7 +359,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
                         className="gallery-item clickable-post"
                         onClick={() => handlePostClick(post)}
                       >
-                        {renderPostContent(post.textcontent || post.imagecontent)}
+                        {renderPostContent(post.textcontent, post.imagecontent)}
                         <div className="post-meta">
                           <span className="post-date">
                             {new Date(post.publishedDate).toLocaleDateString()}
