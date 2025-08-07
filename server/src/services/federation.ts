@@ -25,7 +25,6 @@ federation
     const actor = await findUserByHandle(identifier);
 
     if (!actor) return null;
-    else console.log("Found user!")
 
     const keys = await ctx.getActorKeyPairs(identifier);
 
@@ -204,8 +203,6 @@ federation
     if (to?.type !== "actor") return;
 
     const recipient = to.identifier;
-    // Do something with the recipient
-    console.log(`Received Create Activity from recipient: ${recipient}`);
   })
 
   .on(Accept, async (ctx, accept) => {
