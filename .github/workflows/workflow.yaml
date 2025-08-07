@@ -236,10 +236,9 @@ jobs:
         working-directory: frontend
 
       - name: Package application
-        working-directory: frontend
         run: |
           mkdir -p frontend-build
-          cp -r . frontend-build/
+          cp -r frontend/* frontend-build/
           zip -r frontend-build.zip frontend-build
 
       - name: Upload build artifact
