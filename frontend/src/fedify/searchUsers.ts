@@ -17,7 +17,7 @@ class UserSearchService {
     try {
       // Call your backend search endpoint
       const response = await this.fedify.makeRequest(
-        `http://localhost:8000/api/search/search/users?q=${encodeURIComponent(query)}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/search/search/users?q=${encodeURIComponent(query)}`,
         {},
         0,
         false
@@ -64,7 +64,7 @@ class UserSearchService {
 
 async addRecentSearch(handle: string, profile: string): Promise<{ message: string }> {
   try {
-    const response = await this.fedify.makeRequest(`http://localhost:8000/api/search/recent`, {
+    const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -84,7 +84,7 @@ async addRecentSearch(handle: string, profile: string): Promise<{ message: strin
 
   async getRecentSearches(handle:string): Promise<{ recent_searches: string[], count: number }> {
     try {
-      const response = await this.fedify.makeRequest(`http://localhost:8000/api/search/search/recent?handle=${handle}`, {
+      const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/search/recent?handle=${handle}`, {
         method: 'GET'
       }, 0, false);
       return response;
@@ -97,7 +97,7 @@ async addRecentSearch(handle: string, profile: string): Promise<{ message: strin
 
   async clearRecentSearches(handle:string): Promise<void> {
     try {
-      await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/search/recent?handle=${handle}`, {
+      await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent?handle=${handle}`, {
         method: 'DELETE'
       }, 0, false);
     } catch (error) {
