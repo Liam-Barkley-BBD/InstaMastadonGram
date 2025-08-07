@@ -638,7 +638,7 @@ return {
         }
         
         const query = this.buildQueryParams(handle, uri);
-        return this.makeRequest(`${this.API_BASE_URL}/users/follow${query}`, {
+        return this.makeRequest(`${this.API_BASE_URL}/users/following${query}`, {
             method: "POST",
         }, 0);
     };

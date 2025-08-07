@@ -5,6 +5,7 @@ import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 import ProfilePage from "./ProfilePage";
 import useAuth from "../services/user.service";
+import { follow } from "../services/activities.service";
 
 interface UserCardProps {
   user: any;
@@ -12,6 +13,10 @@ interface UserCardProps {
   isLoading: boolean;
   onFollow: (userId: string) => void;
   onUserClick: (userId: string) => void;
+}
+
+function removeForwardSlashes(str: string) {
+  return str.replace(/\//g, '');
 }
 
 const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
@@ -24,10 +29,12 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
     onFollow(user.id);
   };
 
-  const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
+  const userUrl = new URL(user.url);
+  console.log(user)
 
+  const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
   return (
-    <div className="card clickable" onClick={handleCardClick}>
+    <div className="card clickable">
       <div className="user-card-content">
         <div className="user-info-section">
           <div className="avatar-container">
@@ -60,15 +67,21 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
         </div>
 
         <button
-          onClick={handleFollowClick}
+          onClick={ () => {
+            follow({
+                    actorHandle: `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`,
+                    userName: JSON.parse(localStorage.getItem('user') || '').handle,
+                    activity: 'follow'
+                  })
+                }}
           className={`follow-btn ${isFollowing ? "follow-btn-following" : "follow-btn-follow"}`}
           disabled={isLoading}
           aria-label={isFollowing ? `Unfollow ${user.username}` : `Follow ${user.username}`}
         >
-          {isFollowing ? (
+          {  isFollowing ? (
             <>
               <UserCheck size={16} />
-              <span>Following</span>
+              <span>unFollow</span>
             </>
           ) : (
             <>

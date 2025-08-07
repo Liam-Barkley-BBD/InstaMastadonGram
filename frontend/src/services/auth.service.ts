@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { get } from '../utils/fetch.function';
 
 export interface AuthenticatedUser {
   handle: string;
@@ -16,12 +17,9 @@ export default function useAuth() {
       try {
         const user = getUserFromLocalStorage();
         if(!user) {
-          res = await fetch(`${backendUrl}/api/users/me`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-}
-        if (res && res.ok) {
+          res = await get(`${backendUrl}/api/users/me`);
+        }
+        if (res) {
           const data = await res.json();
           setUser(data);
           localStorage.setItem("user", JSON.stringify(data));
@@ -35,13 +33,11 @@ export default function useAuth() {
         setAuthLoading(false);
       }
     };
-
     fetchUser();
   }, []);
 
   const getUserFromLocalStorage = (): AuthenticatedUser | null => {
-    const user = JSON.parse(localStorage.getItem('user') || '');
-    if(user && !user.handle) localStorage.clear();
+    const user = localStorage.getItem('user');
     if (user) {
       try {
         return JSON.parse(user);
@@ -53,9 +49,10 @@ export default function useAuth() {
     return null;
   }
 
+
   return { user, authLoading };
 }
 
-export function isCurrentUser(handle:string) {
-  return handle === useAuth()?.user?.handle
+export function isCurrentUser(handle:string){
+  return handle === useAuth().user?.handle
 }
