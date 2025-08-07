@@ -222,7 +222,7 @@ jobs:
           EOF
 
   build-frontend:
-    name: Build frontend
+    name: Build Frontend
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -232,19 +232,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install required dependencies
-        run: npm install --force
-        working-directory: frontend
-
-      - name: Build application
-        run: npm run build
+        run: npm install
         working-directory: frontend
 
       - name: Package application
         working-directory: frontend
         run: |
           mkdir -p frontend-build
-          cp -r dist frontend-build/
-          cp package.json frontend-build/
+          cp -r . frontend-build/
           zip -r frontend-build.zip frontend-build
 
       - name: Upload build artifact
@@ -254,7 +249,7 @@ jobs:
           path: frontend/frontend-build.zip
 
   deploy-frontend:
-    name: Deploy frontend to EC2
+    name: Deploy Frontend to EC2
     permissions:
       id-token: write
       contents: read
@@ -274,6 +269,8 @@ jobs:
         with:
           secret-ids: |
             EC2_PRIVATE_KEY, privatekey
+            VITE_BACKEND_URL, vitebackendurl
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -283,35 +280,42 @@ jobs:
         run: |
           echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
           chmod 0500 privatekey.pem
+
+      - name: Set env variables
+        run: |
+          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
+          sudo tee /etc/environment > /dev/null <<'ENV_VAR'
+          VITE_BACKEND_URL=${{ env.VITE_BACKEND_URL }}
+          ENV_VAR
+          EOF
+
       - name: Deploy
         run: |
           EC2_HOST=${{ needs.terraform.outputs.ec2host }}
           scp -o StrictHostKeyChecking=no -i privatekey.pem ./frontend-build.zip "ubuntu@$EC2_HOST:frontend-build.zip"
 
           ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-            unzip -o frontend-build.zip && cd frontend-build && npm install --force
-          '
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
-          cat <<EOF > frontend-build/start-server.sh
-          #!/bin/bash
-          npm run preview
-          EOF'
-      - name: Make script executable
-        run: |
-          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
-            chmod +x frontend-build/start-server.sh
-          '
-      - name: Run with pm2
-        run: |
-          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
-            cd frontend-build/ && 
-            # Stop and delete existing pm2 process if it exists
-            if pm2 list | grep -q "frontend"; then
-              pm2 delete frontend;
-            fi && 
-            pm2 start ./start-server.sh --name frontend
+          sudo apt-get update &&
+          sudo apt-get install -y unzip curl &&
+
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - &&
+          sudo apt-get install -y nodejs &&
+
+          sudo npm install -g pm2 &&
+
+          unzip -o frontend-build.zip &&
+
+          cd frontend-build/ &&
+
+          npm install &&
+
+          # Stop and delete existing pm2 process if it exists
+          if pm2 list | grep -q "instamastadongram-frontend"; then
+            pm2 delete instamastadongram-frontend;
+          fi &&
+
+          pm2 start npm --name instamastadongram-frontend -- run dev
           '
 
   issue-certificates:
@@ -361,8 +365,17 @@ jobs:
               root /var/www/html;
           }
 
+          location / {
+              proxy_pass http://localhost:5173; # Front-end
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+          }
+
           location /api/ {
-              proxy_pass http://localhost:8000;
+              proxy_pass http://localhost:8000; # Server
               proxy_http_version 1.1;
               proxy_set_header Upgrade $http_upgrade;
               proxy_set_header Connection 'upgrade';
