@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="855b271f-5233-4062-8a7f-016b5fc5e001" name="Changes" comment="Refactor CORS configuration and improve code readability">
+      <change beforePath="$PROJECT_DIR$/src/routes/auth.routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/routes/auth.routes.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DatadogProjectSettings">
+    <option name="accountId" value="d502bb74-7dcd-11ec-925a-da7ad0900005" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;othersukwini&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/NoTablesAttached/InstaMastadonGram/&quot;,
+    &quot;accountId&quot;: &quot;89025979-95e0-45d9-9c15-c66f3cdf81be&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="30x3x7Tf45OyeitH0fcBLbSHn6R" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "dev"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-e0ed3721d81e-36ea0e71a18c-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.25410.159" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="855b271f-5233-4062-8a7f-016b5fc5e001" name="Changes" comment="" />
+      <created>1754555642586</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1754555642586</updated>
+    </task>
+    <task id="LOCAL−00001" summary="Add media handling and content filtering features&#10;&#10;- Introduced MediaItem interface for better media management in posts.&#10;- Enhanced Post interface to include mediaItems array.&#10;- Implemented HTML stripping and media extraction utilities.&#10;- Added content filtering logic to exclude NSFW and non-English posts.&#10;- Updated post fetching logic to support new media handling and filtering.&#10;- Created MediaViewer and MediaGrid components for displaying media content.&#10;- Added styles for media components and loading indicators.&#10;- Updated HomePage to display sample posts with new structure.">
+      <option name="closed" value="true" />
+      <created>1754555707270</created>
+      <option name="number" value="LOCAL−00001" />
+      <option name="presentableId" value="LOCAL−00001" />
+      <updated>1754555707270</updated>
+    </task>
+    <task id="LOCAL−00002" summary="Refactor CORS configuration and improve code readability">
+      <option name="closed" value="true" />
+      <created>1754557969764</created>
+      <option name="number" value="LOCAL−00002" />
+      <option name="presentableId" value="LOCAL−00002" />
+      <updated>1754557969764</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
+    <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Add media handling and content filtering features&#10;&#10;- Introduced MediaItem interface for better media management in posts.&#10;- Enhanced Post interface to include mediaItems array.&#10;- Implemented HTML stripping and media extraction utilities.&#10;- Added content filtering logic to exclude NSFW and non-English posts.&#10;- Updated post fetching logic to support new media handling and filtering.&#10;- Created MediaViewer and MediaGrid components for displaying media content.&#10;- Added styles for media components and loading indicators.&#10;- Updated HomePage to display sample posts with new structure." />
+    <MESSAGE value="Refactor CORS configuration and improve code readability" />
+    <option name="LAST_COMMIT_MESSAGE" value="Refactor CORS configuration and improve code readability" />
+  </component>
+</project>

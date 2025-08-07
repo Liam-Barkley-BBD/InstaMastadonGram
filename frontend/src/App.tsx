@@ -5,7 +5,6 @@ import Login from './pages/LoginPage';
 import ProfilePage from "./pages/ProfilePage";
 import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
-import ExplorePage from "./pages/ExplorePage";
 import './App.css';
 import useAuth from "./services/user.service";
 import { FedifyHandler } from "./fedify/fedify";
@@ -76,7 +75,6 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)} isProfileTab = {true}/>} />
-            <Route path="/explore" element={<ExplorePage domain = {fedify.extractDomain(user?.handle)} />} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
           </Routes>
