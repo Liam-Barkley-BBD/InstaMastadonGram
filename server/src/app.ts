@@ -18,15 +18,22 @@ dotenv.config();
 
 const app = express();
 
+const allowedOrigins = ['http://localhost:5173', 'https://bbd-grad-program-2025.online'];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
 app.set("trust proxy", true);
 
-app.use(integrateFederation(federation, (req) => undefined));
+app.use(integrateFederation(federation, (req) => req.user));
 
-app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}))
+app.use("/api/posts", postRoutes);
+
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
+
 app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
