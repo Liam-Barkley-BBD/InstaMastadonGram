@@ -20,8 +20,10 @@ function removeForwardSlashes(str: string) {
   return str.replace(/\//g, '');
 }
 
-const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick, currentUser }: UserCardProps) => {
+const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
+
+  const currentUser = JSON.parse(localStorage.getItem('user') || '')
   
   const handleCardClick = useCallback(() => {
     onUserClick(user.id);
