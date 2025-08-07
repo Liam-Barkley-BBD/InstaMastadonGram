@@ -234,28 +234,45 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Get secrets from AWS Key Store
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            VITE_BACKEND_URL, vitebackendurl
+
+      - name: Set up Vite environment variables
+        working-directory: frontend
+        run: |
+          echo "VITE_BACKEND_URL=${{ env.VITE_BACKEND_URL }}" > .env
+
       - name: Install required dependencies
-        run: npm install
+        run: npm install --force
+        working-directory: frontend
+
+      - name: Build application
+        run: npm run build
         working-directory: frontend
 
       - name: Package application
+        working-directory: frontend
         run: |
           mkdir -p frontend-build
-          rsync -av --progress frontend/ frontend-build/ --exclude node_modules --exclude frontend-build.zip
+          cp -r dist frontend-build/
+          cp package.json frontend-build/
           zip -r frontend-build.zip frontend-build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: frontend-build.zip
+          path: frontend/frontend-build.zip
 
   deploy-frontend:
     name: Deploy Frontend to EC2
     permissions:
       id-token: write
       contents: read
-    needs:
+    needs: 
       - build-frontend
       - terraform
     runs-on: ubuntu-latest
@@ -271,7 +288,6 @@ jobs:
         with:
           secret-ids: |
             EC2_PRIVATE_KEY, privatekey
-            VITE_BACKEND_URL, vitebackendurl
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -283,41 +299,17 @@ jobs:
           echo "${{ env.EC2_PRIVATE_KEY }}" > privatekey.pem
           chmod 0500 privatekey.pem
 
-      - name: Set env variables
-        run: |
-          EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem ubuntu@$EC2_HOST 'bash -s' <<'EOF'
-          sudo tee /etc/environment > /dev/null <<'ENV_VAR'
-          VITE_BACKEND_URL=${{ env.VITE_BACKEND_URL }}
-          ENV_VAR
-          EOF
-
       - name: Deploy
         run: |
           EC2_HOST=${{ needs.terraform.outputs.ec2host }}
-          scp -o StrictHostKeyChecking=no -i privatekey.pem ./frontend-build.zip "ubuntu@$EC2_HOST:frontend-build.zip"
+          scp -o StrictHostKeyChecking=no -i privatekey.pem ./frontend-build.zip "ubuntu@$EC2_HOST:~/frontend-build.zip"
 
-          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" ' 
-          sudo apt-get update &&
-          sudo apt-get install -y unzip curl &&
-
-          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - &&
-          sudo apt-get install -y nodejs &&
-
-          sudo npm install -g pm2 &&
-
-          unzip -o frontend-build.zip &&
-
-          cd frontend-build/ &&
-
-          npm install &&
-
-          # Stop and delete existing pm2 process if it exists
-          if pm2 list | grep -q "instamastadongram-frontend"; then
-            pm2 delete instamastadongram-frontend;
-          fi &&
-
-          pm2 start npm --name instamastadongram-frontend -- run dev
+          ssh -o StrictHostKeyChecking=no -i privatekey.pem "ubuntu@$EC2_HOST" '
+            sudo apt-get update &&
+            sudo apt-get install -y unzip &&
+            unzip -o frontend-build.zip &&
+            sudo rm -rf /var/www/html/* &&
+            sudo cp -r frontend-build/dist/* /var/www/html/ &&
           '
 
   issue-certificates:
@@ -369,12 +361,9 @@ jobs:
           }
 
           location / {
-              proxy_pass http://localhost:5173; # Front-end
-              proxy_http_version 1.1;
-              proxy_set_header Upgrade $http_upgrade;
-              proxy_set_header Connection 'upgrade';
-              proxy_set_header Host $host;
-              proxy_cache_bypass $http_upgrade;
+              root /var/www/html;
+              index index.html;
+              try_files $uri $uri/ /index.html;
           }
 
           location /api/ {
