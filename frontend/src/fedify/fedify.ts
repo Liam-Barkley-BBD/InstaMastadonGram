@@ -429,7 +429,7 @@ return {
         limit: number = 10
     ): Promise<PaginatedPostsResponse> => {
         try {
-            const baseQuery = this.buildQueryParams(handle, uri);
+            const baseQuery = this.buildQueryParams(handle, `${uri}/outbox?page=true`);
             const separator = baseQuery ? '&' : '?';
 
             const fullQuery = baseQuery + separator;

@@ -8,12 +8,21 @@ import UploadMediaPage from "./pages/Uploadpage";
 import './App.css';
 import useAuth from "./services/auth.service";
 import { FedifyHandler } from "./fedify/fedify";
+import { useEffect } from "react";
+import { CircularProgress, Box } from "@mui/material";
+
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const fedify = new FedifyHandler()
+  const fedify = new FedifyHandler();
   const { user, authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user && location.pathname === '/login') {
+      navigate('/');
+    }
+  }, [authLoading, user, location.pathname, navigate]);
 
   const sidebarItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/' },
@@ -26,14 +35,34 @@ function App() {
     navigate(path);
   };
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path: string) => location.pathname === path;
 
-  if (authLoading) return <div>Loading...</div>;
+  if (authLoading) {
+  return (
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      height="100vh"
+      width="100vw"
+    >
+      <CircularProgress />
+    </Box>
+  );
+}
 
-  return user?.handle 
-  ? (
+  if (!user) {
+    return (
+      <div className="login-wrapper">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </div>
+    );
+  }
+
+  return (
     <div className="app-container">
       {/* Sidebar */}
       <aside className="beegram-sidebar">
@@ -57,7 +86,7 @@ function App() {
         <footer className="beegram-profile">
           <section className="beegram-profile-card">
             <article>
-              <h2 className="beegram-username">{fedify.extractUsername(user?.handle)}</h2>
+              <h2 className="beegram-username">{fedify.extractUsername(user?.handle!)}</h2>
               <p className="beegram-handle">{user?.handle}</p>
             </article>
           </section>
@@ -73,9 +102,14 @@ function App() {
         <div className="main-content-inner">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route
+              path="/me"
+              element={<ProfilePage handle={fedify.extractUsername(user?.handle!)} isProfileTab={true} />}
+            />
             <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)} isProfileTab = {true}/>} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </main>
@@ -94,15 +128,7 @@ function App() {
         ))}
       </nav>
     </div>
-  )
-  : (
-      <div className="login-wrapper">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </div>
-    );
+  );
 }
 
 export default App;

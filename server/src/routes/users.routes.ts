@@ -23,7 +23,7 @@ router.get('/me', async (req, res) => {
   }
 })
 
-router.post('/:username/following', async (req, res) => {
+router.post('/:username/follow', async (req, res) => {
   const username = req.params.username;
   const handle = req.body.actor;
 

@@ -25,13 +25,8 @@ const upload = multer({
     }
 });
 
-// router.use(isAuthenticated);
 
-router.post("/:username", (req, res, next) => {
-    console.log("Incoming request before multer");
-    next();
-}, upload.single("media"), async (req, res) => {
-    console.log("Inside route handler after multer");
+router.post("/:username", upload.single("media"), async (req, res) => {
     const { username } = req.params;
     const { content } = req.body;
 
@@ -43,8 +38,6 @@ router.post("/:username", (req, res, next) => {
     if (!actor) {
         return res.status(404).json({ error: "User not found." });
     }
-
-    console.log("user found");
 
     let mediaUrl;
 
@@ -175,9 +168,7 @@ router.post("/:username", (req, res, next) => {
     });
 
     // send the Create activity to all followers
-    console.log("Sending activity to followers!")
     await ctx.sendActivity({ identifier: username }, "followers", activity);
-    console.log("Activity sent!")
 
     return res.status(201).json({
         id: postId,
