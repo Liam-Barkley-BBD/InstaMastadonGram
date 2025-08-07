@@ -83,6 +83,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
 });
 
 const SearchUsersPage = () => {
+  const { user } = useAuth(); // Call useAuth at the top level
   const [viewingProfile, setViewingProfile] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -186,7 +187,7 @@ const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
           </div>
           <div className="user-info">
             <div className="user-avatar">U</div>
-            <span className="username">{useAuth()?.user?.handle}</span>
+            <span className="username">{user?.handle}</span>
           </div>
         </header>
 
