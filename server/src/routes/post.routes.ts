@@ -189,12 +189,12 @@ router.post("/:username", (req, res, next) => {
 
 router.get("/fediverse", async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, instance } = req.query;
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 20;
 
     const fediverseInstances = [
-      "mastodon.social",
+      instance
     ];
 
     const fetchInstancePosts = async (instance: string) => {

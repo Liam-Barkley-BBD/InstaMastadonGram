@@ -14,11 +14,12 @@ export interface PostsResponse {
 
 export const fetchAllPosts = async (
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  instance: string
 ): Promise<PostsResponse> => {
   try {
     const response = await fetch(
-      `${backendUrl}/api/posts/fediverse?page=${page}&limit=${limit}`,
+      `${backendUrl}/api/posts/fediverse?page=${page}&limit=${limit}&instance=konnect.tevlen.co.za`,
       {
         method: "GET",
         credentials: "include",

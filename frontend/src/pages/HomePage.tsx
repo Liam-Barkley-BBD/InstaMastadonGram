@@ -6,6 +6,8 @@ import { fetchAllPosts, formatTimestamp } from "../services/post.service";
 import LinkPreviewComponent from "../components/LinkPreview";
 import MediaGrid from "../components/MediaGrid";
 import { extractLinks } from "../utils/linkUtils";
+import useAuth from "../services/user.service";
+import { FedifyHandler } from "../fedify/fedify";
 
 const HomePage: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -27,7 +29,12 @@ const HomePage: React.FC = () => {
           setLoadingMore(true);
         }
 
-        const response = await fetchAllPosts(pageNum, 20);
+        const fedify = new FedifyHandler()  
+        const response = await fetchAllPosts(
+          pageNum,
+          20,
+          fedify.extractDomain(useAuth().user.handle)
+        );
 
         if (append) {
           setPosts((prevPosts) => [...prevPosts, ...response.items]);
