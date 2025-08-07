@@ -1,5 +1,5 @@
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Home, Search, Plus, User, Globe } from 'lucide-react';
+import { Home, Search, Plus, User } from 'lucide-react';
 import HomePage from "./pages/HomePage";
 import Login from './pages/LoginPage';
 import ProfilePage from "./pages/ProfilePage";
