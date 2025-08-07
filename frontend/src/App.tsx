@@ -17,7 +17,6 @@ function App() {
 
   const sidebarItems = [
     { id: 'home', icon: Home, label: 'Home', path: '/' },
-    { id: 'explore', icon: Globe, label: 'Explore', path: '/explore' },
     { id: 'search', icon: Search, label: 'Search', path: '/search' },
     { id: 'create', icon: Plus, label: 'Create', path: '/create' },
     { id: 'profile', icon: User, label: 'Profile', path: '/me' }
