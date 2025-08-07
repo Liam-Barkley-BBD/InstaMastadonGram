@@ -173,88 +173,37 @@ router.get('/search/users', async (req, res) => {
             total: 0
         };
 
-        // First, search local actors
-        await client.connect();
-
-        try {
-            await Actor.collection.createIndex({ handle: 'text' });
-        } catch (indexError) {
-            // Index might already exist
-        }
-
-        const localResults = await Actor.aggregate([
-            {
-                $match: {
-                    $or: [
-                        { $text: { $search: q } },
-                        { handle: { $regex: q, $options: 'i' } },
-                        { handle: { $regex: `.*${q}.*`, $options: 'i' } }
-                    ]
-                }
-            },
-            {
-                $addFields: {
-                    relevanceScore: {
-                        $add: [
-                            { $cond: [{ $eq: [{ $toLower: '$handle' }, { $toLower: q }] }, 100, 0] },
-                            { $cond: [{ $regexMatch: { input: '$handle', regex: `^${q}`, options: 'i' } }, 80, 0] },
-                            { $cond: [{ $regexMatch: { input: '$handle', regex: q, options: 'i' } }, 50, 0] },
-                            { $ifNull: [{ $meta: 'textScore' }, 0] }
-                        ]
-                    }
-                }
-            },
-            { $sort: { relevanceScore: -1, handle: 1 } },
-            { $limit: 10 },
-            {
-                $project: {
-                    userId: 1,
-                    uri: 1,
-                    handle: 1,
-                    inboxUri: 1,
-                    relevanceScore: 1,
-                    source: { $literal: 'local' }
-                }
-            }
-        ]);
-
-        results.local = localResults;
 
         // If no exact local match and query looks like a handle, try WebFinger
         if (includeRemote === 'true' && (q.includes('@') || q.startsWith('@'))) {
-            const exactLocalMatch = localResults.find(actor => 
-                actor.handle.toLowerCase() === q.toLowerCase()
-            );
 
-            if (!exactLocalMatch) {
-                try {
-                    const remoteProfile = await discoverActorViaWebFinger(q);
+            try {
+                const remoteProfile = await discoverActorViaWebFinger(q);
 
-                    // Extract relevant information from the ActivityPub profile
-                    const remoteActor = {
-                        userId: remoteProfile.id,
-                        uri: remoteProfile.id,
-                        handle: remoteProfile.preferredUsername ? 
-                            `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` : 
-                            q,
-                        inboxUri: remoteProfile.inbox,
-                        displayName: remoteProfile.name,
-                        summary: remoteProfile.summary,
-                        icon: remoteProfile.icon?.url,
-                        followersCount: remoteProfile.followers ? 
-                            (typeof remoteProfile.followers === 'string' ? null : remoteProfile.followers.totalItems) : 
-                            null,
-                        followingCount: remoteProfile.following ? 
-                            (typeof remoteProfile.following === 'string' ? null : remoteProfile.following.totalItems) : 
-                            null,
-                        source: 'remote'
-                    };
+                // Extract relevant information from the ActivityPub profile
+                const remoteActor = {
+                    userId: remoteProfile.id,
+                    uri: remoteProfile.id,
+                    handle: remoteProfile.preferredUsername ?
+                        `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` :
+                        q,
+                    inboxUri: remoteProfile.inbox,
+                    displayName: remoteProfile.name,
+                    summary: remoteProfile.summary,
+                    icon: remoteProfile.icon?.url,
+                    followersCount: remoteProfile.followers ?
+                        (typeof remoteProfile.followers === 'string' ? null : remoteProfile.followers.totalItems) :
+                        null,
+                    followingCount: remoteProfile.following ?
+                        (typeof remoteProfile.following === 'string' ? null : remoteProfile.following.totalItems) :
+                        null,
+                    source: 'remote'
+                };
 
-                    results.remote = remoteActor;
-                } catch (webfingerError) {
-                    console.warn('WebFinger lookup failed:', webfingerError.message);
-                    // Don't return error, just no remote results
-                }
+                results.remote = remoteActor;
+            } catch (webfingerError) {
+                console.warn('WebFinger lookup failed:', webfingerError.message);
+                // Don't return error, just no remote results
             }
         }
 
@@ -292,8 +241,8 @@ router.get('/actor/:handle', async (req, res) => {
                 const remoteActor = {
                     userId: remoteProfile.id,
                     uri: remoteProfile.id,
-                    handle: remoteProfile.preferredUsername ? 
-                        `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` : 
+                    handle: remoteProfile.preferredUsername ?
+                        `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` :
                         handle,
                     inboxUri: remoteProfile.inbox,
                     displayName: remoteProfile.name,
@@ -306,9 +255,9 @@ router.get('/actor/:handle', async (req, res) => {
                 res.json(remoteActor);
 
             } catch (webfingerError) {
-                res.status(404).json({ 
+                res.status(404).json({
                     error: 'Actor not found locally or via WebFinger',
-                    details: webfingerError.message 
+                    details: webfingerError.message
                 });
             }
         } else {
@@ -333,9 +282,9 @@ router.post('/actor/save', async (req, res) => {
         // Check if already exists with exact match
         const existingActor = await findUserByHandle(handle);
         if (existingActor) {
-            return res.json({ 
+            return res.json({
                 message: 'Actor already exists locally',
-                actor: existingActor 
+                actor: existingActor
             });
         }
 
@@ -346,8 +295,8 @@ router.post('/actor/save', async (req, res) => {
         const newActor = new Actor({
             userId: remoteProfile.id,
             uri: remoteProfile.id,
-            handle: remoteProfile.preferredUsername ? 
-                `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` : 
+            handle: remoteProfile.preferredUsername ?
+                `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` :
                 handle,
             inboxUri: remoteProfile.inbox,
             sharedInboxUri: remoteProfile.sharedInbox,

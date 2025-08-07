@@ -57,7 +57,7 @@ export class FedifyHandler {
         "Connection": "keep-alive",
     }
 
-    EXPRESS_URL = "http://localhost:8000/api/frontend";
+    EXPRESS_URL = `${import.meta.env.VITE_BACKEND_URL}/api/frontend`;
 
      async makeRequest(
         url: string,
@@ -277,6 +277,7 @@ export class FedifyHandler {
     maxFollowingToFetch: number = 30,
     postsPerUser: number = 3
 ): Promise<any> => {
+
     try {
         // Step 1: Get following accounts with pagination if needed
         let allFollowing: Following[] = [];
@@ -292,6 +293,7 @@ export class FedifyHandler {
             // Safety break to prevent infinite loops
             if (page > 5) break;
         }
+
 
         if (allFollowing.length === 0) {
             return { 
@@ -324,6 +326,7 @@ export class FedifyHandler {
                         1,
                         postsPerUser
                     );
+
                     
                     if (userPosts.items.length > 0) {
                         const postsWithSource = userPosts.items.map(post => ({
@@ -367,6 +370,7 @@ export class FedifyHandler {
         // Step 5: Take the requested number of posts
         const selectedPosts:any[] = allPosts.slice(0, limit);
 
+
         // Step 6: Prepare source information
         const sources = Object.entries(sourceCounts)
             .map(([username, info]) => ({
@@ -377,7 +381,6 @@ export class FedifyHandler {
             }))
             .sort((a, b) => b.postCount - a.postCount);
 
-        console.log(selectedPosts)
 
 return {
   items: selectedPosts
