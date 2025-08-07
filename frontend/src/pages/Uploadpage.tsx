@@ -101,84 +101,77 @@ const UploadMediaPage = () => {
           </div>
         </div>
 
-        <div className="upload-grid">
-          {/* Upload Section */}
-          <div className="upload-left">
-            <div className="upload-box">
-              <h2>
-                <Upload size={24} /> Upload Media
-              </h2>
+        <div className="upload-box combined-box">
+          <h2>
+            <Upload size={24} /> Create Post
+          </h2>
 
-              {selectedFiles.length === 0 ? (
-                <div className="upload-dropzone" onClick={() => fileInputRef.current?.click()}>
-                  <div className="dropzone-content">
-                    <div className="dropzone-icon">
-                      <Camera size={32} />
-                    </div>
-                    <p className="dropzone-title">No image content</p>
-                    <p className="dropzone-subtitle">
-                      Drag photos and videos here or click to browse
-                    </p>
-                  </div>
+          {/* Upload Section */}
+          {selectedFiles.length === 0 ? (
+            <div className="upload-dropzone" onClick={() => fileInputRef.current?.click()}>
+              <div className="dropzone-content">
+                <div className="dropzone-icon">
+                  <Camera size={32} />
                 </div>
-              ) : (
-                <div className="upload-preview-grid">
-                  {selectedFiles.map((file) => (
-                    <div key={file.id} className="upload-preview-item">
-                      <div className="preview-media">
-                        {file.type === "image" ? (
-                          <img src={file.url} alt="Preview" />
-                        ) : (
-                          <video src={file.url} muted />
-                        )}
-                      </div>
-                      <button className="remove-btn" onClick={() => removeFile(file.id)}>
-                        <X size={14} />
-                      </button>
-                      <div className="media-icon">
-                        {file.type === "video" ? <Video size={16} /> : <Image size={16} />}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="upload-more" onClick={() => fileInputRef.current?.click()}>
-                    <Upload size={24} />
-                  </div>
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+                <p className="dropzone-title">No image content</p>
+                <p className="dropzone-subtitle">
+                  Drag photos and videos here or click to browse
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="upload-preview-grid">
+              {selectedFiles.map((file) => (
+                <div key={file.id} className="upload-preview-item">
+                  <div className="preview-media">
+                    {file.type === "image" ? (
+                      <img src={file.url} alt="Preview" />
+                    ) : (
+                      <video src={file.url} muted />
+                    )}
+                  </div>
+                  <button className="remove-btn" onClick={() => removeFile(file.id)}>
+                    <X size={14} />
+                  </button>
+                  <div className="media-icon">
+                    {file.type === "video" ? <Video size={16} /> : <Image size={16} />}
+                  </div>
+                </div>
+              ))}
+              <div className="upload-more" onClick={() => fileInputRef.current?.click()}>
+                <Upload size={24} />
+              </div>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
 
           {/* Post Details */}
-          <div className="upload-right">
-            <div className="upload-box">
-              <h2>Post Details</h2>
-              <div className="caption-box">
-                <label>Caption</label>
-                <textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Share your story... What's on your mind?"
-                  maxLength={2200}
-                />
-                <div className="caption-footer">
-                  <button>
-                    <Smile size={20} />
-                  </button>
-                  <span>{caption.length}/2200</span>
-                </div>
-              </div>
-              <button className="share-btn" disabled={!caption.trim()} onClick={handleShare}>
-                Share Post
+          <div className="caption-box" style={{ marginTop: "1.5rem" }}>
+            <label>Caption</label>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Share your story... What's on your mind?"
+              maxLength={2200}
+            />
+            <div className="caption-footer">
+              <button>
+                <Smile size={20} />
               </button>
+              <span>{caption.length}/2200</span>
             </div>
           </div>
+
+          <button className="share-btn" disabled={!caption.trim()} onClick={handleShare}>
+            Share Post
+          </button>
         </div>
         {(selectedFiles.length > 0 || caption) && (
           <div className="upload-box preview">
