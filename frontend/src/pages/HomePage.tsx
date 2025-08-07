@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Image, MessageCircle } from 'lucide-react';
+import {  MessageCircle } from 'lucide-react';
 import './styles/HomePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 import useAuth from '../services/user.service';
 
 // Define the Post type based on the provided Mastodon data structure
-interface Post {
-  id: string;
-  imagecontent: Array<{
-    url: string;
-    name: string;
-    mediaType: string;
-    width: number;
-    height: number;
-  }>;
-  textcontent: string;
-  publishedDate: string;
-  url: string;
-  replies: number;
-  shares: number;
-  likes: number;
-}
+// interface Post {
+//   id: string;
+//   imagecontent: Array<{
+//     url: string;
+//     name: string;
+//     mediaType: string;
+//     width: number;
+//     height: number;
+//   }>;
+//   textcontent: string;
+//   publishedDate: string;
+//   url: string;
+//   replies: number;
+//   shares: number;
+//   likes: number;
+// }
 
 const HomePage: React.FC = () => {
   const fedifyHandler = new FedifyHandler();

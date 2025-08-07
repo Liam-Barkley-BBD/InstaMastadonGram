@@ -161,45 +161,6 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
     setSelectedPost(null);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) {
-      return '1 day ago';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    }
-  };
-
-  const extractTextContent = (content: string | PostContent[]): string => {
-    console.log(content)
-    if (typeof content === 'string') {
-      // Remove HTML tags for display
-      return content.replace(/<[^>]*>/g, '');
-    }
-    return '';
-  };
-
-  const getImageContent = (content: string | PostContent[]): PostContent | null => {
-    console.log(content)
-    if (Array.isArray(content)) {
-      return content.find(item => item.type === 'Document' && item.mediaType?.startsWith('image/')) || null;
-    }
-    return null;
-  };
-
   const renderPostContent = (content: string | PostContent[]) => {
     if (typeof content === 'string') {
       return (

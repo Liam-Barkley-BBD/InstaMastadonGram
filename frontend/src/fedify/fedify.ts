@@ -365,7 +365,7 @@ export class FedifyHandler {
         });
 
         // Step 5: Take the requested number of posts
-        const selectedPosts = allPosts.slice(0, limit);
+        const selectedPosts:any[] = allPosts.slice(0, limit);
 
         // Step 6: Prepare source information
         const sources = Object.entries(sourceCounts)
