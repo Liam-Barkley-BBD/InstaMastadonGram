@@ -1,4 +1,3 @@
-// Define interfaces for type safety
 interface UserProfile {
   id: string;
   username: string;
@@ -37,6 +36,15 @@ interface Post {
   publishedDate: string;
   url: string;
   likes?: number;
+  replies?: number;
+  shares?: number;
+  actor: {
+    handle: string;
+    name: string;
+    id: string;
+    domain?: string;
+  };
+  instance?: string;
 }
 
 interface PaginatedPostsResponse {
@@ -45,10 +53,15 @@ interface PaginatedPostsResponse {
   hasNextPage: boolean;
   nextPage?: number;
   pagesLoaded: number;
+  sources?: {
+    local: number;
+    fediverse: number;
+    instances: string[];
+  };
 }
 
 export class FedifyHandler {
-  API_BASE_URL = "https://mastodon.social"; // Set your Express API URL here
+  API_BASE_URL = "https://mastodon.social";
   fedify_headers = {
     Accept: "application/activity+json",
     "Accept-encoding": "gzip, deflate, br",
@@ -137,7 +150,7 @@ export class FedifyHandler {
         const userIndex = pathParts.indexOf("users");
         return pathParts[userIndex + 1] || "unknown";
       }
-      // Handle @username format
+
       const lastPart = pathParts[pathParts.length - 1];
       if (lastPart?.startsWith("@")) {
         return lastPart.substring(1);
@@ -174,7 +187,6 @@ export class FedifyHandler {
     return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
   };
 
-  // Optimized getProfile - only fetches basic info + counts + first 20 posts
   getProfile = async (handle: string): Promise<UserProfile> => {
     const rawProfile = await this.makeRequest(
       `${this.EXPRESS_URL}/profile/${handle}`,
@@ -199,20 +211,17 @@ export class FedifyHandler {
       postsCount: 0,
     };
 
-    // Fetch counts and initial posts in parallel
     const [countsData, postsData] = await Promise.allSettled([
       this.getProfileCounts(handle),
-      this.getPostsPaginated(handle, 1, 20), // Start with page 1, 20 posts
+      this.getPostsPaginated(handle, 1, 20),
     ]);
 
-    // Handle counts
     if (countsData.status === "fulfilled" && countsData.value) {
       profileData.followersCount = countsData.value.followersCount || 0;
       profileData.followingCount = countsData.value.followingCount || 0;
       profileData.postsCount = countsData.value.postsCount || 0;
     }
 
-    // Handle initial posts
     if (postsData.status === "fulfilled" && postsData.value) {
       profileData.posts = postsData.value.items || [];
     }
@@ -220,7 +229,6 @@ export class FedifyHandler {
     return profileData as UserProfile;
   };
 
-  // New method to get just the counts
   private getProfileCounts = async (
     handle: string
   ): Promise<{
@@ -247,7 +255,6 @@ export class FedifyHandler {
     }
   };
 
-  // New paginated posts method
   getPostsPaginated = async (
     handle: string,
     page: number = 1,
@@ -268,7 +275,6 @@ export class FedifyHandler {
         if (typeof orderedItems[0] === "string") {
           posts = await this.resolveMultiplePosts(orderedItems);
         } else {
-          // Already post objects
           posts = orderedItems.map((post: any) => ({
             id: post.id,
             content:
@@ -303,7 +309,6 @@ export class FedifyHandler {
     }
   };
 
-  // Method to load followers when needed
   getFollowersPaginated = async (
     handle: string,
     page: number = 1,
@@ -524,7 +529,9 @@ export class FedifyHandler {
           handle: post.actor.handle,
           name: post.actor.name,
           id: post.actor.id,
+          domain: post.actor.domain,
         },
+        instance: post.instance,
       }));
 
       return {
@@ -536,6 +543,54 @@ export class FedifyHandler {
       };
     } catch (error) {
       console.warn("Failed to fetch all posts:", error);
+      return {
+        items: [],
+        totalItems: 0,
+        hasNextPage: false,
+        pagesLoaded: 0,
+      };
+    }
+  };
+
+  getFediversePosts = async (
+    page: number = 1,
+    limit: number = 20
+  ): Promise<PaginatedPostsResponse> => {
+    try {
+      const response = await this.makeRequest(
+        `${this.EXPRESS_URL}/posts/fediverse?page=${page}&limit=${limit}`,
+        {},
+        0,
+        false
+      );
+
+      const posts: Post[] = response.items.map((post: any) => ({
+        id: post.id,
+        content: this.stripHtml(post.content || ""),
+        publishedDate: post.publishedDate,
+        url: post.url,
+        likes: post.likes || 0,
+        replies: post.replies || 0,
+        shares: post.shares || 0,
+        actor: {
+          handle: post.actor.handle,
+          name: post.actor.name,
+          id: post.actor.id,
+          domain: post.actor.domain,
+        },
+        instance: post.instance,
+      }));
+
+      return {
+        items: posts,
+        totalItems: response.totalItems || 0,
+        hasNextPage: response.hasNextPage || false,
+        nextPage: response.nextPage,
+        pagesLoaded: response.pagesLoaded || page,
+        sources: response.sources,
+      };
+    } catch (error) {
+      console.warn("Failed to fetch fediverse posts:", error);
       return {
         items: [],
         totalItems: 0,

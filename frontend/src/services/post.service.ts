@@ -1,4 +1,6 @@
 import type { Post } from "../types/Post";
+import { filterPost } from "../config/contentFilter";
+import { stripHtml, extractMediaFromHtml } from "../utils/htmlUtils";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -16,7 +18,7 @@ export const fetchAllPosts = async (
 ): Promise<PostsResponse> => {
   try {
     const response = await fetch(
-      `${backendUrl}/api/posts/all?page=${page}&limit=${limit}`,
+      `${backendUrl}/api/posts/fediverse?page=${page}&limit=${limit}`,
       {
         method: "GET",
         credentials: "include",
@@ -31,7 +33,48 @@ export const fetchAllPosts = async (
     }
 
     const data = await response.json();
-    return data;
+    
+    const filteredItems = data.items.filter(filterPost);
+    
+    // Process posts to extract media and strip HTML
+    const processedItems = filteredItems.map((post: Post) => {
+      const mediaItems = post.mediaItems || [];
+      
+      // If no mediaItems but legacy imageUrl/videoUrl exist, convert them
+      if (mediaItems.length === 0 && (post.imageUrl || post.videoUrl)) {
+        if (post.imageUrl) {
+          mediaItems.push({ type: 'image', url: post.imageUrl });
+        }
+        if (post.videoUrl) {
+          mediaItems.push({ type: 'video', url: post.videoUrl });
+        }
+      }
+      
+      // If still no media items, try to extract from content
+      if (mediaItems.length === 0 && post.content) {
+        const { images, videos } = extractMediaFromHtml(post.content);
+        images.forEach(url => {
+          mediaItems.push({ type: 'image', url });
+        });
+        videos.forEach(url => {
+          mediaItems.push({ type: 'video', url });
+        });
+      }
+      
+      return {
+        ...post,
+        content: stripHtml(post.content || ''),
+        mediaItems: mediaItems,
+        imageUrl: mediaItems.find(item => item.type === 'image')?.url || null,
+        videoUrl: mediaItems.find(item => item.type === 'video')?.url || null
+      };
+    });
+    
+    return {
+      ...data,
+      items: processedItems,
+      totalItems: processedItems.length
+    };
   } catch (error) {
     console.error("Error fetching posts:", error);
     throw error;

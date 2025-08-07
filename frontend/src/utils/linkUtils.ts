@@ -1,7 +1,5 @@
-// Regular expression to match URLs
 const URL_REGEX =
-  /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/g;
-
+  /(https?:\/\/|ftp:\/\/|mailto:|tel:)[^\s<>"'(){}[\]]+|(?:www\.[^\s<>"'(){}[\]]+)|(?:[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s<>"'(){}[\]]*)/gi;
 export interface LinkPreview {
   url: string;
   title?: string;
@@ -28,8 +26,6 @@ export const fetchLinkPreview = async (
   url: string
 ): Promise<LinkPreview | null> => {
   try {
-    // For now, we'll create a simple preview based on the URL
-    // In a real implementation, you'd want to fetch the actual page metadata
     const domain = getDomain(url);
 
     return {

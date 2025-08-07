@@ -228,6 +228,23 @@
   object-fit: cover;
 }
 
+.beegram-text-content {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.beegram-text {
+  font-size: 1rem;
+  color: #e5e7eb;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 .beegram-empty-content {
   display: flex;
   flex-direction: column;

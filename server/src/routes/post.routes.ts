@@ -6,12 +6,14 @@ import Post from "../models/post.model.ts";
 import { Create, Note, PUBLIC_COLLECTION } from "@fedify/fedify";
 import crypto from "crypto";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
+import { extractMediaFromHtml, stripHtml } from "../utils/index.ts";
+
 
 const router = express.Router();
 
-// Apply authentication to all routes except /all
+// Apply authentication to all routes except /all and /fediverse
 router.use((req, res, next) => {
-  if (req.path === "/all") {
+  if (req.path === "/all" || req.path === "/fediverse") {
     return next();
   }
   return isAuthenticated(req, res, next);
@@ -101,50 +103,232 @@ router.post("/:username", async (req, res) => {
   });
 });
 
-router.get("/all", async (req, res) => {
+router.get("/fediverse", async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const pageNum = parseInt(page as string) || 1;
     const limitNum = parseInt(limit as string) || 20;
 
-    // Get all posts from the database with pagination
-    const posts = await Post.find({})
+    const fediverseInstances = [
+      "mastodon.social",
+    ];
+
+    const fetchInstancePosts = async (instance: string) => {
+      try {
+        const response = await fetch(`https://${instance}/api/v1/timelines/public?limit=${limitNum * 3}`, {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'InstaMastadonGram/1.0'
+          }
+        });
+
+        if (!response.ok) {
+          console.warn(`Failed to fetch from ${instance}: ${response.status}`);
+          return [];
+        }
+
+        const posts = await response.json();
+        
+        const filteredPosts = posts.filter((post: any) => {
+          if (post.sensitive === true) {
+            return false;
+          }
+          
+          const plainText = stripHtml(post.content || '');
+          const content = plainText.toLowerCase();
+          const nsfwKeywords = [
+            'nsfw', 'nsfl', 'sensitive', 'explicit', 'adult', 'mature',
+            'porn', 'pornography', 'sex', 'sexual', 'nude', 'nudity',
+            'violence', 'gore', 'blood', 'death', 'suicide', 'self-harm'
+          ];
+          
+          const hasNsfwKeyword = nsfwKeywords.some(keyword => 
+            content.includes(keyword) || 
+            (post.tags && post.tags.some((tag: any) => tag.name.toLowerCase().includes(keyword)))
+          );
+          
+          if (hasNsfwKeyword) {
+            return false;
+          }
+          
+          if (post.tags && post.tags.some((tag: any) => {
+            const tagName = tag.name.toLowerCase();
+            return nsfwKeywords.some(keyword => tagName.includes(keyword));
+          })) {
+            return false;
+          }
+          
+          const asciiRatio = plainText.replace(/[^\x00-\x7F]/g, '').length / plainText.length;
+          const englishWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their'];
+          const lowerText = plainText.toLowerCase();
+          const englishWordCount = englishWords.filter(word => lowerText.includes(word)).length;
+          const isEnglish = asciiRatio >= 0.8 && (plainText.length < 10 || englishWordCount >= 2);
+          
+          if (!isEnglish) {
+            return false;
+          }
+          
+          return true;
+        });
+        
+        return filteredPosts.map((post: any) => {
+          const { images, videos } = extractMediaFromHtml(post.content || '');
+          
+          const mediaItems: Array<{ type: 'image' | 'video', url: string }> = [];
+          
+          images.forEach(url => {
+            mediaItems.push({ type: 'image', url });
+          });
+          
+          videos.forEach(url => {
+            mediaItems.push({ type: 'video', url });
+          });
+          
+          if (post.media_attachments && post.media_attachments.length > 0) {
+            post.media_attachments.forEach((media: any) => {
+              if (media.type === 'image') {
+                mediaItems.push({ 
+                  type: 'image', 
+                  url: media.url || media.preview_url 
+                });
+              } else if (media.type === 'video') {
+                mediaItems.push({ 
+                  type: 'video', 
+                  url: media.url || media.preview_url 
+                });
+              }
+            });
+          }
+          
+          return {
+            id: post.id,
+            content: stripHtml(post.content || ''),
+            publishedDate: post.created_at,
+            url: post.url,
+            likes: post.favourites_count || 0,
+            replies: post.replies_count || 0,
+            shares: post.reblogs_count || 0,
+            mediaItems: mediaItems,
+            actor: {
+              handle: post.account.username,
+              name: post.account.display_name || post.account.username,
+              id: post.account.id,
+              domain: instance
+            },
+            instance: instance,
+            sensitive: post.sensitive || false
+          };
+        });
+      } catch (error) {
+        console.warn(`Error fetching from ${instance}:`, error);
+        return [];
+      }
+    };
+
+    const instancePromises = fediverseInstances.map(fetchInstancePosts);
+    const instanceResults = await Promise.allSettled(instancePromises);
+
+    let allPosts: any[] = [];
+    instanceResults.forEach((result, _) => {
+      if (result.status === 'fulfilled') {
+        allPosts.push(...result.value);
+      }
+    });
+
+    const shuffleArray = (array: any[]) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    const postsByAccount = new Map<string, any[]>();
+    allPosts.forEach(post => {
+      const accountKey = `${post.actor.handle}@${post.actor.domain}`;
+      if (!postsByAccount.has(accountKey)) {
+        postsByAccount.set(accountKey, []);
+      }
+      postsByAccount.get(accountKey)!.push(post);
+    });
+
+    const randomizedPosts: any[] = [];
+    const accountKeys = Array.from(postsByAccount.keys());
+    
+    const shuffledAccounts = shuffleArray(accountKeys);
+    
+    let maxPostsPerAccount = Math.max(...Array.from(postsByAccount.values()).map(posts => posts.length));
+    
+    for (let i = 0; i < maxPostsPerAccount; i++) {
+      for (const accountKey of shuffledAccounts) {
+        const accountPosts = postsByAccount.get(accountKey)!;
+        if (i < accountPosts.length) {
+          randomizedPosts.push(accountPosts[i]);
+        }
+      }
+    }
+
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const paginatedPosts = randomizedPosts.slice(startIndex, endIndex);
+
+    const localPosts = await Post.find({})
       .populate("actor", "handle name")
       .sort({ created: -1 })
-      .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
 
-    const totalPosts = await Post.countDocuments({});
+    const formattedLocalPosts = localPosts.map((post) => {
+      const mediaItems: Array<{ type: 'image' | 'video', url: string }> = [];
+      
+      if (post.imageUrl) {
+        mediaItems.push({ type: 'image', url: post.imageUrl });
+      }
+      if (post.videoUrl) {
+        mediaItems.push({ type: 'video', url: post.videoUrl });
+      }
+      
+      return {
+        id: post._id.toString(),
+        content: stripHtml(post.content || ''),
+        publishedDate: post.created.toISOString(),
+        mediaItems: mediaItems,
+        imageUrl: post.imageUrl || null,
+        videoUrl: post.videoUrl || null,
+        actor: {
+          handle: post.actor.handle,
+          name: post.actor.handle,
+          id: post.actor._id.toString(),
+          domain: req.get("host") || "localhost"
+        },
+        url: `${req.protocol}://${req.get("host")}/users/${post.actor.handle}/posts/${post._id}`,
+        likes: 0,
+        replies: 0,
+        shares: 0,
+        instance: req.get("host") || "localhost"
+      };
+    });
 
-    const formattedPosts = posts.map((post) => ({
-      id: post._id.toString(),
-      content: post.content,
-      publishedDate: post.created.toISOString(),
-      imageUrl: post.imageUrl || null,
-      videoUrl: post.videoUrl || null,
-      actor: {
-        handle: post.actor.handle,
-        name: post.actor.handle, // Use handle as name since Actor model doesn't have name field
-        id: post.actor._id.toString(),
-      },
-      url: `${req.protocol}://${req.get("host")}/users/${
-        post.actor.handle
-      }/posts/${post._id}`,
-      likes: 0, // Default value, can be enhanced later
-      replies: 0, // Default value, can be enhanced later
-      shares: 0, // Default value, can be enhanced later
-    }));
+    const combinedPosts = [...formattedLocalPosts, ...paginatedPosts];
+    combinedPosts.sort((a, b) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime());
+
+    const finalPosts = combinedPosts.slice(0, limitNum);
 
     res.status(200).json({
-      items: formattedPosts,
-      totalItems: totalPosts,
-      hasNextPage: pageNum * limitNum < totalPosts,
-      nextPage: pageNum * limitNum < totalPosts ? pageNum + 1 : undefined,
+      items: finalPosts,
+      totalItems: combinedPosts.length,
+      hasNextPage: combinedPosts.length > limitNum,
+      nextPage: combinedPosts.length > limitNum ? pageNum + 1 : undefined,
       pagesLoaded: pageNum,
+      sources: {
+        local: formattedLocalPosts.length,
+        fediverse: paginatedPosts.length,
+        instances: fediverseInstances
+      }
     });
   } catch (error) {
-    console.error("Error fetching all posts:", error);
-    res.status(500).json({ error: "Failed to fetch posts" });
+    console.error("Error fetching fediverse posts:", error);
+    res.status(500).json({ error: "Failed to fetch fediverse posts" });
   }
 });
 

@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
+import MediaGrid from '../components/MediaGrid';
+import type { MediaItem } from '../types/Post';
 
 interface User {
   id: string;
@@ -151,24 +153,22 @@ const ProfilePage = () => {
     }
 
     if (Array.isArray(content)) {
-      return (
-        <div className="post-content">
-          {content.map((item, index) => {
-            if (item.type === 'Document' && item.mediaType?.startsWith('image/')) {
-              return (
-                <div key={index} className="post-image">
-                  <img 
-                    src={item.url} 
-                    alt={item.name || 'Post image'} 
-                    loading="lazy"
-                  />
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      );
+      // Convert PostContent[] to MediaItem[]
+      const mediaItems: MediaItem[] = content
+        .filter(item => item.type === 'Document' && item.mediaType)
+        .map(item => ({
+          type: item.mediaType?.startsWith('image/') ? 'image' : 'video',
+          url: item.url || ''
+        }))
+        .filter(item => item.url);
+
+      if (mediaItems.length > 0) {
+        return (
+          <div className="post-content">
+            <MediaGrid mediaItems={mediaItems} postId={`profile-${Date.now()}`} />
+          </div>
+        );
+      }
     }
 
     return null;
