@@ -511,7 +511,7 @@ federation
     const followingActor = await Actor.findOne({ handle: identifier });
     if (!followingActor) return 0;
 
-    const count = await FollowModel.countDocuments({ following: followingActor._id });
+    const count = await FollowModel.countDocuments({ follower: followingActor._id });
     return count;
   });
 
