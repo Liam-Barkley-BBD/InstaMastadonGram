@@ -186,7 +186,7 @@ const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
           </div>
           <div className="user-info">
             <div className="user-avatar">U</div>
-            <span className="username">{useAuth().user.handle}</span>
+            <span className="username">{useAuth()?.user?.handle}</span>
           </div>
         </header>
 
