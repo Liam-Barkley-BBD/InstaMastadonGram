@@ -36,9 +36,9 @@ export const isAuthenticated = async(req: Request, res: Response, next: NextFunc
 
       const actor = new Actor({
         userId: currentUser?._id,
-        uri: `${process.env.DOMAIN}/users/${sanitizedHandle}`,
-        inboxUri: `${process.env.DOMAIN}/users/${sanitizedHandle}/inbox`,
-        sharedInboxUri: `${process.env.DOMAIN}/inbox`,
+        uri: `${process.env.DOMAIN}/api/users/${sanitizedHandle}`,
+        inboxUri: `${process.env.DOMAIN}/api/users/${sanitizedHandle}/inbox`,
+        sharedInboxUri: `${process.env.DOMAIN}/api/inbox`,
         handle: sanitizedHandle,
         keys: {
           rsa: {
