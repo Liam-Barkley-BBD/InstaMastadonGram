@@ -19,10 +19,9 @@ function removeForwardSlashes(str: string) {
   return str.replace(/\//g, '');
 }
 
-const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick, currentUser }: UserCardProps) => {
+const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
- 
-  currentUser = JSON.parse(localStorage.getItem('user') || '').handle
+
   const handleCardClick = useCallback(() => {
     onUserClick(user.id);
   }, [user.id, onUserClick]);
@@ -36,7 +35,7 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick, cu
   const handleAvatarError = useCallback(() => {
     setAvatarSrc("/default-avatar.png");
   }, []);
- 
+
   return (
     <div className="card">
       <div className="user-card-content clickable" onClick={handleCardClick}>
@@ -95,7 +94,6 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick, cu
   );
 });
 
-UserCard.displayName = 'UserCard';
 
 const SearchUsersPage = () => {
   const { user: currentUser } = useAuth();
