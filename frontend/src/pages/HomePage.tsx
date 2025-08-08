@@ -40,7 +40,6 @@ const HomePage: React.FC = () => {
           2 // postsPerUser
         );
         setPosts(optimizedFeed.items);
-        console.log('Fetched optimized feed:', optimizedFeed);
       } catch (err) {
         console.error('Failed to fetch optimized posts:', err);
       } finally {
