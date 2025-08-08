@@ -40,7 +40,6 @@ const HomePage: React.FC = () => {
           2 // postsPerUser
         );
         setPosts(optimizedFeed.items);
-        console.log('Fetched optimized feed:', optimizedFeed);
       } catch (err) {
         console.error('Failed to fetch optimized posts:', err);
       } finally {
@@ -133,7 +132,6 @@ const HomePage: React.FC = () => {
               <p className="beegram-empty-text">
                 Start following people to see their buzz-worthy posts
               </p>
-              <button className="beegram-discover-btn">Discover People</button>
             </section>
           )}
         </>

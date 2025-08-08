@@ -74,7 +74,6 @@ const UploadMediaPage = () => {
       }
 
       const data = await response.json();
-      console.log("Upload success:", data);
       alert("Post shared successfully!");
 
       selectedFiles.forEach((f) => URL.revokeObjectURL(f.url));

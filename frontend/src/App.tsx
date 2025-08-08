@@ -86,7 +86,7 @@ function App() {
         <footer className="beegram-profile">
           <section className="beegram-profile-card">
             <article>
-              <h2 className="beegram-username">{fedify.extractUsername(user?.handle!)}</h2>
+              <h2 className="beegram-username">{(user?.name!)}</h2>
               <p className="beegram-handle">{user?.handle}</p>
             </article>
           </section>
@@ -104,7 +104,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route
               path="/me"
-              element={<ProfilePage handle={fedify.extractUsername(user?.handle!)} isProfileTab={true} />}
+              element={<ProfilePage handle={user?.url} isProfileTab={true} />}
             />
             <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)} isProfileTab = {true}/>} />
             <Route path="/search" element={<SearchUsersPage />} />

@@ -137,7 +137,6 @@ const SearchUsersPage = () => {
   const handleUserClick = useCallback((userId: string) => {
     const foundUser = searchResults.find(u => u.id === userId);
     if (foundUser) {
-      console.log(foundUser);
       setViewingProfile(foundUser);
     }
   }, [searchResults]);

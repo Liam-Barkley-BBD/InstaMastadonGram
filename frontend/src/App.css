@@ -23,7 +23,7 @@
   display: none;
   width: 280px;
   min-height: 100vh;
-  background: #03005f;
+  background:  rgba(16, 3, 48, 0.908);
   border-right: 1px solid #433fb9;
   flex-direction: column;
   padding: 2rem 1.5rem 1.5rem;
@@ -49,76 +49,87 @@
 .beegram-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
+  gap: 0.75rem;
 }
 
 .beegram-nav-btn {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.875rem 1.25rem;
-  background: transparent;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
   border: none;
   color: #f8f8f8;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  border-radius: 0.875rem;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: left;
-  width: 100%;
 }
 
-.beegram-nav-btn:hover {
-  background-color: rgba(251, 146, 60, 0.1);
+
+.beegram-nav-btn:hover,
+.beegram-nav-btn.active {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  transform: translateX(5px);
 }
 
 .beegram-nav-btn.active {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.2);
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 #fb923c;
 }
 
 .beegram-nav-btn span {
-  font-weight: 600;
+  flex: 1;
 }
 
 .beegram-profile {
   margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .beegram-profile-card {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 1.25rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-  border-radius: 1rem;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.beegram-profile-card:hover {
+  background: rgba(139, 92, 246, 0.2);
+  transform: translateY(-2px);
 }
 
 .beegram-avatar {
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, #f97316, #fbbf24);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1rem;
-  color: white;
+  font-size: 1.1rem;
+  color: #fff;
+  text-transform: uppercase;
 }
 
 .beegram-username {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: white;
-  margin: 0 0 2px 0;
+  color: #fff;
+  margin: 0;
 }
 
 .beegram-handle {
-  font-size: 0.75rem;
-  color: #5103a0;
+  font-size: 0.85rem;
+  color: #c084fc;
   margin: 0;
 }
 
