@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
-// import type { UserProfile } from "../types";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
 import ProfilePage from "./ProfilePage";
@@ -13,60 +12,34 @@ interface UserCardProps {
   isLoading: boolean;
   onFollow: (userId: string) => void;
   onUserClick: (userId: string) => void;
-  currentUser: any; // Add currentUser prop
+  currentUser: any;
 }
 
 function removeForwardSlashes(str: string) {
   return str.replace(/\//g, '');
 }
 
-const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: UserCardProps) => {
+const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick, currentUser }: UserCardProps) => {
   const [avatarSrc, setAvatarSrc] = useState(user.avatar || "/default-avatar.png");
-
-  const currentUser = JSON.parse(localStorage.getItem('user') || '')
-  
+ 
+  currentUser = JSON.parse(localStorage.getItem('user') || '').handle
   const handleCardClick = useCallback(() => {
     onUserClick(user.id);
   }, [user.id, onUserClick]);
 
   const handleFollowClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    
-    // Safety check for user URL
-    if (!user.url) {
-      console.error('User URL is missing');
-      return;
-    }
-    
-    try {
-      const userUrl = new URL(user.url);
-      
-      // Safety check for currentUser
-      if (!currentUser?.handle) {
-        console.error('Current user handle is missing');
-        return;
-      }
-      
-      follow({
-        actorHandle: `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`,
-        userName: currentUser.handle,
-        activity: 'follow'
-      });
-      
-      // Call the onFollow callback
-      onFollow(user.id);
-    } catch (error) {
-      console.error('Error processing follow action:', error);
-    }
-  }, [user.url, user.id, currentUser?.handle, onFollow]);
+    onFollow(user.id);
+  }, [user.id, onFollow]);
 
   const handleAvatarError = useCallback(() => {
     setAvatarSrc("/default-avatar.png");
   }, []);
-  
+ 
   return (
-    <div className="card clickable" onClick={handleCardClick}>
-      <div className="user-card-content">
+    <div className="card">
+      <div className="user-card-content clickable" onClick={handleCardClick}>
         <div className="user-info-section">
           <div className="avatar-container">
             <img
@@ -96,7 +69,9 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="follow-button-wrapper">
         <button
           onClick={handleFollowClick}
           className={`follow-btn ${isFollowing ? "follow-btn-following" : "follow-btn-follow"}`}
@@ -120,11 +95,10 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
   );
 });
 
-// Add display name for debugging
 UserCard.displayName = 'UserCard';
 
 const SearchUsersPage = () => {
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
   const [viewingProfile, setViewingProfile] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -157,7 +131,7 @@ const SearchUsersPage = () => {
 
     setIsLoading(true);
     setError(null);
-    
+   
     try {
       const results = await userSearchService.searchUsers(query);
       setSearchResults(Array.isArray(results) ? results : []);
@@ -188,7 +162,13 @@ const SearchUsersPage = () => {
 
   const handleFollow = useCallback(async (userId: string) => {
     const isCurrentlyFollowing = followingUsers.has(userId);
-    
+    const userToFollow = searchResults.find(u => u.id === userId);
+   
+    if (!userToFollow?.url || !currentUser?.handle) {
+      setError("Missing required user information");
+      return;
+    }
+
     try {
       // Optimistically update UI
       setFollowingUsers(prev => {
@@ -198,26 +178,29 @@ const SearchUsersPage = () => {
       });
 
       // Call API
-      if (isCurrentlyFollowing) {
-        await userSearchService.unfollowUser(userId);
-      } else {
-        await userSearchService.followUser(userId);
-      }
+      const userUrl = new URL(userToFollow.url);
+      const actorHandle = `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`;
+     
+      await follow({
+        actorHandle,
+        userName: currentUser.handle,
+        activity: isCurrentlyFollowing ? 'unfollow' : 'follow'
+      });
+
     } catch (err) {
       console.error('Follow/unfollow error:', err);
-      
+     
       // Revert optimistic update on error
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
         return newSet;
       });
-      
+     
       setError(`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`);
     }
-  }, [followingUsers]);
+  }, [followingUsers, searchResults, currentUser]);
 
-  // Clear error after a delay
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -249,9 +232,9 @@ const SearchUsersPage = () => {
           </div>
           <div className="user-info">
             <div className="user-avatar">
-              {user?.handle ? user.handle.charAt(0).toUpperCase() : 'U'}
+              {currentUser?.handle ? currentUser.handle.charAt(0).toUpperCase() : 'U'}
             </div>
-            <span className="username">{user?.handle || 'Guest'}</span>
+            <span className="username">{currentUser?.handle || 'Guest'}</span>
           </div>
         </header>
 
@@ -307,7 +290,7 @@ const SearchUsersPage = () => {
                     isLoading={isLoading}
                     onFollow={handleFollow}
                     onUserClick={handleUserClick}
-                    currentUser={user} // Pass current user
+                    currentUser={currentUser}
                   />
                 ))}
               </div>
