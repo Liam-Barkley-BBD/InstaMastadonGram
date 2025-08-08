@@ -4,6 +4,7 @@ import { get } from '../utils/fetch.function';
 export interface AuthenticatedUser {
   handle: string;
   inboxUri: string;
+  url:string
 }
 
 export default function useAuth() {
