@@ -86,7 +86,7 @@ function App() {
         <footer className="beegram-profile">
           <section className="beegram-profile-card">
             <article>
-              <h2 className="beegram-username">{fedify.extractUsername(user?.url!)}</h2>
+              <h2 className="beegram-username">{(user?.name!)}</h2>
               <p className="beegram-handle">{user?.handle}</p>
             </article>
           </section>
