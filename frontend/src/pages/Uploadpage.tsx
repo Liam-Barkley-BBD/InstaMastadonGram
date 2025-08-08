@@ -73,9 +73,6 @@ const UploadMediaPage = () => {
         return;
       }
 
-      const data = await response.json();
-      alert("Post shared successfully!");
-
       selectedFiles.forEach((f) => URL.revokeObjectURL(f.url));
       setSelectedFiles([]);
       setCaption("");
