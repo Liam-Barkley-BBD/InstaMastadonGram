@@ -3,9 +3,8 @@
   flex-direction: column;
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  color: white;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    sans-serif;
+  color: #d1d5db; /* Light gray for text, matching the image */
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .beegram-mobile-header {
@@ -15,7 +14,7 @@
   padding: 0.75rem 1rem;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.3); /* Purple accent */
   position: sticky;
   top: 0;
   z-index: 10;
@@ -24,10 +23,9 @@
 .beegram-mobile-logo {
   font-size: 1.25rem;
   font-weight: 900;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f97316; /* Orange accent, similar to the image's active button */
+  -webkit-text-fill-color: #f97316; /* Ensure solid color */
+  background-clip: initial;
 }
 
 .beegram-mobile-nav {
@@ -37,7 +35,7 @@
   padding: 0.5rem 0.25rem;
   background: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(139, 92, 246, 0.3);
+  border-top: 1px solid rgba(139, 92, 246, 0.3); /* Purple accent */
   position: fixed;
   bottom: 0;
   left: 0;
@@ -53,7 +51,7 @@
   padding: 0.5rem 0.25rem;
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: #9ca3af; /* Gray for inactive buttons */
   cursor: pointer;
   border-radius: 0.75rem;
   transition: all 0.3s ease;
@@ -61,13 +59,14 @@
 }
 
 .beegram-mobile-nav-btn.active {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.2);
+  color: #f97316; /* Orange for active button */
+  background: rgba(249, 115, 22, 0.2); /* Matching orange with transparency */
 }
 
 .beegram-mobile-nav-label {
   font-size: 0.625rem;
   font-weight: 600;
+  color: #9ca3af; /* Gray for labels */
 }
 
 .beegram-sidebar {
@@ -86,9 +85,9 @@
 }
 
 .beegram-post {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(26, 26, 46, 0.833); /* Darker shade from gradient */
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.3); /* Purple accent */
   border-radius: 1rem;
   padding: 1rem;
   margin-bottom: 1.5rem;
@@ -111,22 +110,19 @@
 
 .beegram-empty-emoji {
   font-size: 2.5rem;
-  margin-bottom: 1rem;
+  color: #f97316; /* Orange accent */
 }
 
 .beegram-empty-heading {
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #f97316; /* Orange accent */
 }
 
 .beegram-empty-text {
   font-size: 0.875rem;
-  color: #c084fc;
+  color: #c084fc; /* Purple accent for text */
   max-width: 20rem;
   margin-bottom: 1rem;
 }
@@ -196,6 +192,7 @@
     width: 280px;
     position: fixed;
     height: 100vh;
+    background: rgba(26, 26, 46, 0.8); /* Matching sidebar background */
   }
 
   .beegram-mobile-header,
@@ -214,7 +211,7 @@
   }
 
   .beegram-post {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(26, 26, 46, 0.6);
     padding: 1.5rem;
     margin-bottom: 2rem;
     border-radius: 1.5rem;
@@ -266,8 +263,8 @@
 }
 
 .beegram-loader {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #FFD700; /* Gold/yellow color for the bee theme */
+  border: 4px solid #d1d5db; /* Light gray border */
+  border-top: 4px solid #f97316; /* Orange accent for loader */
   border-radius: 50%;
   width: 40px;
   height: 40px;

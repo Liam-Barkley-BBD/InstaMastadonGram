@@ -29,20 +29,28 @@
   gap: 0.5rem;
 }
 
-.upload-avatar {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(to right, orange, pink);
-  border-radius: 50%;
+.upload-avatar,
+.upload-avatar.small {
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
   color: white;
+  border-radius: 50%;
+  background: linear-gradient(to right, orange, pink);
   font-size: 0.875rem;
+  width: 32px;
+  height: 32px;
 }
 
-.combined-box {
+.upload-avatar.small {
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+}
+
+.combined-box,
+.upload-box.preview {
   max-width: 600px;
   margin: 0 auto;
   background-color: rgba(30, 30, 30, 0.9);
@@ -51,13 +59,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-}
-
-
-.upload-avatar.small {
-  width: 28px;
-  height: 28px;
-  font-size: 0.75rem;
 }
 
 .upload-grid {
@@ -80,22 +81,9 @@
   color: white;
 }
 
-.upload-box.preview {
-  max-width: 600px;
-  margin: 2rem auto 0 auto;
-  background-color: rgba(30, 30, 30, 0.9);
-  padding: 2rem;
-  border-radius: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-
 .upload-box h2,
 .upload-box h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin: 0 0 1rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -146,11 +134,6 @@
   position: relative;
 }
 
-.upload-preview-item .preview-media img,
-.upload-preview-item .preview-media video {
-  max-height: 200px;
-}
-
 .preview-media {
   aspect-ratio: 1 / 1;
   border-radius: 0.5rem;
@@ -160,8 +143,8 @@
 
 .preview-media img,
 .preview-media video {
-  max-height: 300px;
   width: 100%;
+  max-height: 300px;
   object-fit: cover;
   border-radius: 0.75rem;
 }
@@ -274,13 +257,10 @@
   color: gray;
 }
 
+/* Media Queries - only include overrides that differ significantly */
 @media (min-width: 480px) {
   .upload-page {
     padding: 1.25rem;
-  }
-
-  .upload-header {
-    margin-bottom: 2rem;
   }
 
   .upload-header h1 {
@@ -298,67 +278,13 @@
     height: 30px;
     font-size: 0.8rem;
   }
-  
-  .upload-grid {
-    gap: 2rem;
-  }
-
-  .upload-box {
-    padding: 1.5rem;
-    border-radius: 1rem;
-  }
-
-  .upload-box h2,
-  .upload-box h3 {
-    font-size: 1.25rem;
-  }
-
-  .upload-dropzone {
-    padding: 2.5rem 2rem;
-    border-radius: 1rem;
-  }
-
-  .dropzone-icon {
-    padding: 1rem;
-    font-size: 1.75rem;
-  }
-
-  .dropzone-title {
-    font-size: 1.125rem;
-  }
-
-  .dropzone-subtitle {
-    font-size: 0.8rem;
-  }
 
   .upload-preview-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 1rem;
-  }
-
-  .remove-btn {
-    width: 20px;
-    height: 20px;
-    font-size: 0.8rem;
-  }
-
-  .caption-box textarea {
-    padding: 1rem;
-    min-height: 120px;
-    font-size: 0.95rem;
-  }
-
-  .share-btn {
-    padding: 0.875rem 1.25rem;
-    font-size: 0.95rem;
   }
 }
 
 @media (min-width: 640px) {
-  .upload-page {
-    padding: 1.5rem;
-  }
-
   .upload-container {
     max-width: 800px;
   }
@@ -367,99 +293,12 @@
     font-size: 2rem;
   }
 
-  .upload-avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-  }
-
-  .upload-avatar.small {
-    width: 32px;
-    height: 32px;
-    font-size: 0.875rem;
-  }
-  
-  .upload-grid {
-    gap: 2rem;
-  }
-
-  .upload-left,
-  .upload-right {
-    align-self: flex-start;
-  }
-
-  .upload-box {
-    padding: 2rem;
-    border-radius: 1.25rem;
-  }
-
-  .upload-box h2,
-  .upload-box h3 {
-    font-size: 1.375rem;
-  }
-
-  .upload-dropzone {
-    padding: 3rem 2.5rem;
-    border-radius: 1.25rem;
-  }
-
-  .dropzone-icon {
-    padding: 1.25rem;
-    font-size: 2rem;
-  }
-
-  .dropzone-title {
-    font-size: 1.25rem;
-  }
-
-  .dropzone-subtitle {
-    font-size: 0.875rem;
-  }
-
   .upload-preview-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .caption-box textarea {
-    padding: 1.25rem;
-    min-height: 140px;
-    font-size: 1rem;
-  }
-
-  .share-btn {
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
-  }
-
-.preview-post .preview-media img,
-.preview-post .preview-media video {
-  max-height: 300px;
-  width: 100%;
-  object-fit: cover;
-  border-radius: 0.75rem;
-}
-
-
-  .preview-post {
-    padding: 1.25rem;
-    border-radius: 1rem;
-  }
-
-  .preview-header p {
-    font-size: 1rem;
-  }
-
-  .location {
-    font-size: 0.75rem;
   }
 }
 
 @media (min-width: 768px) {
-  .upload-page {
-    padding: 2rem;
-  }
-
   .upload-container {
     max-width: 1000px;
   }
@@ -468,77 +307,8 @@
     font-size: 2.25rem;
   }
 
-  .upload-avatar {
-    width: 44px;
-    height: 44px;
-    font-size: 1.1rem;
-  }
-
-  .upload-avatar.small {
-    width: 36px;
-    height: 36px;
-    font-size: 0.95rem;
-  }
-  
-  .upload-grid {
-    gap: 3rem;
-  }
-
-  .upload-box {
-    padding: 2.5rem;
-    border-radius: 1.5rem;
-  }
-
-  .upload-box h2,
-  .upload-box h3 {
-    font-size: 1.5rem;
-  }
-
-  .upload-dropzone {
-    padding: 3.5rem 3rem;
-    border-radius: 1.5rem;
-  }
-
-  .dropzone-icon {
-    padding: 1.5rem;
-    font-size: 2.25rem;
-  }
-
-  .dropzone-title {
-    font-size: 1.375rem;
-  }
-
-  .dropzone-subtitle {
-    font-size: 1rem;
-  }
-
   .upload-preview-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .caption-box textarea {
-    padding: 1.5rem;
-    min-height: 160px;
-    font-size: 1.1rem;
-  }
-
-  .share-btn {
-    padding: 1.125rem 1.75rem;
-    font-size: 1.1rem;
-  }
-
-  .preview-post {
-    padding: 1.5rem;
-    border-radius: 1.25rem;
-  }
-
-  .preview-header p {
-    font-size: 1.125rem;
-  }
-
-  .location {
-    font-size: 0.875rem;
   }
 }
 
@@ -562,58 +332,9 @@
     height: 40px;
     font-size: 1rem;
   }
-  
-  .upload-grid {
-    gap: 3.5rem;
-  }
-
-  .upload-box {
-    padding: 3rem;
-    border-radius: 1.75rem;
-  }
-
-  .upload-box h2,
-  .upload-box h3 {
-    font-size: 1.625rem;
-  }
-
-  .upload-dropzone {
-    padding: 4rem 3.5rem;
-    border-radius: 1.75rem;
-  }
-
-  .dropzone-icon {
-    padding: 1.75rem;
-    font-size: 2.5rem;
-  }
-
-  .dropzone-title {
-    font-size: 1.5rem;
-  }
-
-  .dropzone-subtitle {
-    font-size: 1.125rem;
-  }
 
   .upload-preview-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1.75rem;
-  }
-
-  .caption-box textarea {
-    padding: 1.75rem;
-    min-height: 180px;
-    font-size: 1.2rem;
-  }
-
-  .share-btn {
-    padding: 1.25rem 2rem;
-    font-size: 1.2rem;
-  }
-
-  .preview-post {
-    padding: 1.75rem;
-    border-radius: 1.5rem;
   }
 
   .preview-header p {

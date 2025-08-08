@@ -133,7 +133,6 @@ const HomePage: React.FC = () => {
               <p className="beegram-empty-text">
                 Start following people to see their buzz-worthy posts
               </p>
-              <button className="beegram-discover-btn">Discover People</button>
             </section>
           )}
         </>
