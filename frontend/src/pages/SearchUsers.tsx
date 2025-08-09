@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, memo } from "react";
+import { useState, useCallback, useRef, memo } from "react";
 import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
@@ -94,7 +94,6 @@ const UserCard = memo(({ user, isFollowing, isLoading, onFollow, onUserClick }: 
   );
 });
 
-
 const SearchUsersPage = () => {
   const { user: currentUser } = useAuth();
   const [viewingProfile, setViewingProfile] = useState<any | null>(null);
@@ -102,9 +101,13 @@ const SearchUsersPage = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const previousQueryRef = useRef("");
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isValidHandleFormat = (query: string) => {
+    return /^[^@]+@[^@]+$/.test(query.trim());
+  };
 
   const handleUserClick = useCallback((userId: string) => {
     const foundUser = searchResults.find(u => u.id === userId);
@@ -120,7 +123,14 @@ const SearchUsersPage = () => {
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
+      setHasSearched(false);
       previousQueryRef.current = "";
+      return;
+    }
+
+    if (!isValidHandleFormat(query)) {
+      setError("Search format must be <handle>@<domain>");
+      setSearchResults([]);
       return;
     }
 
@@ -129,34 +139,18 @@ const SearchUsersPage = () => {
 
     setIsLoading(true);
     setError(null);
+    setHasSearched(true);
    
     try {
       const results = await userSearchService.searchUsers(query);
       setSearchResults(Array.isArray(results) ? results : []);
     } catch (err) {
-      console.error('Search error:', err);
-      setError(err instanceof Error ? err.message : "Failed to search users");
+      // setError(err instanceof Error ? err.message : "Failed to search users");
       setSearchResults([]);
     } finally {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      searchUsers(searchQuery);
-    }, 500);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [searchQuery, searchUsers]);
 
   const handleFollow = useCallback(async (userId: string) => {
     const isCurrentlyFollowing = followingUsers.has(userId);
@@ -175,7 +169,6 @@ const SearchUsersPage = () => {
         return newSet;
       });
 
-      // Call API
       const userUrl = new URL(userToFollow.url);
       const actorHandle = `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`;
      
@@ -185,10 +178,7 @@ const SearchUsersPage = () => {
         activity: isCurrentlyFollowing ? 'unfollow' : 'follow'
       });
 
-    } catch (err) {
-      console.error('Follow/unfollow error:', err);
-     
-      // Revert optimistic update on error
+    } catch {
       setFollowingUsers(prev => {
         const newSet = new Set(prev);
         isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
@@ -198,15 +188,6 @@ const SearchUsersPage = () => {
       setError(`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`);
     }
   }, [followingUsers, searchResults, currentUser]);
-
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
 
   if (viewingProfile) {
     return (
@@ -243,11 +224,17 @@ const SearchUsersPage = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search users by name or username..."
+              placeholder="Search users (format: handle@domain)"
               className="search-input"
               aria-label="Search users"
               enterKeyHint="search"
             />
+            <button
+              onClick={() => searchUsers(searchQuery)}
+              className="search-btn"
+            >
+              Search
+            </button>
           </div>
         </div>
 
@@ -257,7 +244,7 @@ const SearchUsersPage = () => {
           </div>
         )}
 
-        {searchQuery && (
+        {hasSearched && (
           <section className="mb-8">
             <h2 className="section-title mb-4">
               {isLoading ? "Searching..." : `Results (${searchResults.length})`}

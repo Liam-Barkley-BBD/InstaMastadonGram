@@ -467,3 +467,39 @@ body {
 .back-to-list-btn:hover .back-arrow {
   transform: translateX(-2px);
 }
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  outline: none;
+  flex: 1;
+}
+
+.search-btn {
+  background: linear-gradient(45deg, #a855f7, #ec4899);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 0.5rem; /* small space between bar and button */
+}
+
+.search-btn:hover {
+  background: linear-gradient(45deg, #9333ea, #db2777);
+  transform: translateY(-1px);
+}
+
+.search-btn:active {
+  transform: translateY(0);
+}

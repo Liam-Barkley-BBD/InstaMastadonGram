@@ -35,9 +35,6 @@ class UserSearchService {
       }  else if (response.remote) {
         const remoteProfile:any = await this.fedify.getProfile(undefined, response.remote.uri);
         processedResults.push(remoteProfile);
-      } else if (!response.remote || !(response.local && response.local.length > 0)){
-        const profile:any = await this.fedify.getProfile(query);
-        processedResults.push(profile);
       } else {
         processedResults = []
       }
