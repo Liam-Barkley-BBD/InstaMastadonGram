@@ -1,9 +1,16 @@
-import mongoose from "mongoose";
+import mongoose, { Document } from "mongoose";
 
 const userSchema = new mongoose.Schema({
   googleId: { type: String, required: true, unique: true },
   name: String,
   email: String,
+  handle: String,
 });
 
-export default mongoose.model("User", userSchema);
+export interface UserDoc extends Document {
+  googleId: string;
+  name: string;
+  email: string;
+  handle: string;
+}
+export default mongoose.model<UserDoc>("User", userSchema);;
