@@ -605,7 +605,7 @@ export class FedifyHandler {
     try {
       const baseQuery = this.buildQueryParams(handle, uri);
       const separator = baseQuery ? "&" : "?";
-      const paginationQuery = `page=${page}&limit=${limit}`;
+      const paginationQuery = `cursor=${page}&page=true`;
       const fullQuery = baseQuery + separator + paginationQuery;
 
       const followingResponse = await this.makeRequest(
