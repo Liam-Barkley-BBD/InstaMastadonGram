@@ -15,7 +15,6 @@ class UserSearchService {
     }
 
     try {
-      // Call your backend search endpoint
       const response = await this.fedify.makeRequest(
         `${import.meta.env.VITE_BACKEND_URL}/api/search/users?q=${encodeURIComponent(query)}`,
         {},
@@ -48,7 +47,6 @@ class UserSearchService {
 
   async followUser(userId: string): Promise<void> {
     try {
-      // TODO: Implement the actual follow API call
       await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/follow`, {
         method: 'POST',
         body: JSON.stringify({ userId })
@@ -61,7 +59,6 @@ class UserSearchService {
 
   async unfollowUser(userId: string): Promise<void> {
     try {
-      // TODO: Implement the actual unfollow API call
       await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/unfollow`, {
         method: 'POST',
         body: JSON.stringify({ userId })
@@ -73,5 +70,4 @@ class UserSearchService {
   }
 }
 
-// Create a singleton instance
 export const userSearchService = new UserSearchService();
