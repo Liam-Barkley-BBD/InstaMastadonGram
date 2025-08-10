@@ -15,8 +15,8 @@ const HomePage: React.FC = () => {
       try {
         setIsLoading(true);
         const optimizedFeed = await fedifyHandler.getFollowingPosts(
-          fedifyHandler.extractUsername(auth?.user?.handle as string),
           undefined,
+          `${auth.user?.url}/follows`,
           60, // limit
           25, // maxFollowingToFetch
           2 // postsPerUser
