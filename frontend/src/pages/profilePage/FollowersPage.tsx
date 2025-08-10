@@ -66,7 +66,6 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
   );
 
   useEffect(() => {
-    console.log(currentUser);
     if (!handle) return;
 
     const controller = new AbortController();
