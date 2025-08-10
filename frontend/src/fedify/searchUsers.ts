@@ -91,7 +91,7 @@ class UserSearchService {
 
   async getRecentSearches(handle:string): Promise<{ recent_searches: string[], count: number }> {
     try {
-      const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/search/recent?handle=${handle}`, {
+      const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent?handle=${handle}`, {
         method: 'GET'
       }, 0, false);
       return response;
