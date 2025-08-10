@@ -1,17 +1,22 @@
-import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
-import { Home, Search, Plus, User } from 'lucide-react';
+import {
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import { Home, Search, Plus, User } from "lucide-react";
 import HomePage from "./pages/HomePage";
-import Login from './pages/LoginPage';
+import Login from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
-import FollowersPage from "./pages/profilePage/FollowersPage";
-import './App.css';
+import FollowersPage from "./pages/FollowersPage";
+import "./App.css";
 import useAuth from "./services/auth.service";
 import { FedifyHandler } from "./fedify/fedify";
 import { useEffect } from "react";
 import { CircularProgress, Box } from "@mui/material";
-
 
 function App() {
   const navigate = useNavigate();
@@ -20,16 +25,16 @@ function App() {
   const { user, authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user && location.pathname === '/login') {
-      navigate('/');
+    if (!authLoading && user && location.pathname === "/login") {
+      navigate("/");
     }
   }, [authLoading, user, location.pathname, navigate]);
 
   const sidebarItems = [
-    { id: 'home', icon: Home, label: 'Home', path: '/' },
-    { id: 'search', icon: Search, label: 'Search', path: '/search' },
-    { id: 'create', icon: Plus, label: 'Create', path: '/create' },
-    { id: 'profile', icon: User, label: 'Profile', path: '/me' }
+    { id: "home", icon: Home, label: "Home", path: "/" },
+    { id: "search", icon: Search, label: "Search", path: "/search" },
+    { id: "create", icon: Plus, label: "Create", path: "/create" },
+    { id: "profile", icon: User, label: "Profile", path: "/me" },
   ];
 
   const handleNavigation = (path: string) => {
@@ -39,18 +44,18 @@ function App() {
   const isActive = (path: string) => location.pathname === path;
 
   if (authLoading) {
-  return (
-    <Box
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      height="100vh"
-      width="100vw"
-    >
-      <CircularProgress />
-    </Box>
-  );
-}
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="100vh"
+        width="100vw"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!user) {
     return (
@@ -76,7 +81,9 @@ function App() {
             <button
               key={item.id}
               onClick={() => handleNavigation(item.path)}
-              className={`beegram-nav-btn ${isActive(item.path) ? 'active' : ''}`}
+              className={`beegram-nav-btn ${
+                isActive(item.path) ? "active" : ""
+              }`}
             >
               <item.icon size={24} />
               <span>{item.label}</span>
@@ -87,7 +94,7 @@ function App() {
         <footer className="beegram-profile">
           <section className="beegram-profile-card">
             <article>
-              <h2 className="beegram-username">{(user?.name!)}</h2>
+              <h2 className="beegram-username">{user?.name!}</h2>
               <p className="beegram-handle">{user?.handle}</p>
             </article>
           </section>
@@ -116,12 +123,7 @@ function App() {
                 />
               }
             />
-            <Route
-              path="/profile"
-              element={
-                <ProfilePage />
-              }
-            />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />

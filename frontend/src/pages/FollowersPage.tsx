@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FedifyHandler } from "../../fedify/fedify";
-import { Search } from "lucide-react";
-import useAuth from "../../services/user.service";
-import { UserCard } from "../../components/UserCard";
-import { userSearchService } from "../../fedify/searchUsers";
+import { FedifyHandler } from "../fedify/fedify";
+import { ArrowLeft, Search } from "lucide-react";
+import useAuth from "../services/user.service";
+import { UserCard } from "../components/UserCard";
+import { userSearchService } from "../fedify/searchUsers";
+
+import "./styles/FollowersPage.css"
 
 interface GetFollowersResponse {
   orderedItems: string[];
@@ -59,7 +61,7 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
     (userId: string) => {
       const foundUser = searchResults.find((u) => u.id === userId);
       if (foundUser) {
-        navigate(`/profile?user=${foundUser.url}`)
+        navigate(`/profile?user=${foundUser.url}`);
       }
     },
     [searchResults, navigate]
@@ -151,11 +153,18 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
     [followingUsers, searchResults, currentUser]
   );
 
+const handleBack = () => {
+  navigate(-1);
+}
+
   return (
     <div className="page-container">
       <div className="container">
         <header className="header">
-          <div>
+          <div className="follower-results-header">
+            <button onClick={handleBack} className="beegram-nav-btn">
+              <ArrowLeft />
+            </button>
             <h1>
               {isFollowers
                 ? `${handle}'s followers`
