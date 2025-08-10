@@ -1,31 +1,36 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import federation from "../services/federation.ts";
-import { Follow, isActor, Undo, type Recipient } from "@fedify/fedify";
-import { findUserByHandle } from "../services/actor.service.ts";
-import crypto from "crypto";
+import { Follow, isActor, Undo, type Actor, type Context, type Federation, type Recipient } from "@fedify/fedify";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
 import ActivityModel from "../models/activity.model.ts";
 import mongoose from "mongoose";
+import { createActivityId, extractUsernameAndDomain } from "../utils/helper.function.ts";
+import { type UserDoc } from "../models/user.model.ts";
 
 const router = Router();
 router.use(isAuthenticated);
 
-router.get('/me', async (req, res) => {
+router.get('/me', async (req: Request, res: Response) => {
   try {
-    const user = req.user;
+    const user = req.user as UserDoc;
     if(!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "Not found" });
     }
-    res.status(200).json(user);
+    res.status(200).json({ 
+      googleId: user.googleId,
+      name: user.name,
+      email: user.email,
+      handle: user.handle
+    });
 
   } catch (error) {
     res.status(500).json({ error: `An error occured: ${error}`});
   }
 })
 
-router.post('/:username/follow', async (req, res) => {
+router.post('/:username/activity', async (req: Request, res: Response) => {
   const username = req.params.username;
-  const handle = req.body.actor;
+  const { handle, activity } = req.body;
 
   const domainUsername = extractUsernameAndDomain(handle);
 
@@ -36,127 +41,102 @@ router.post('/:username/follow', async (req, res) => {
 
   const externalActorInformation = await externalActorResponse.json();
   
-  if (typeof handle !== 'string') {
+  if (!handle || typeof handle !== 'string') {
     return res.status(400).send('Invalid actor handle or URL');
   }
 
+  const contextData: ContextData = { session: req.sessionID, actor: username};
+
   try {
-    const externalContext = federation.createContext(new URL(externalActorInformation.url), undefined);
-    const externalActor = await externalContext.lookupObject(handle.trim());
-    const savedActor = await findUserByHandle(username);
-    const internalContext = federation.createContext(new URL(savedActor?.uri!), undefined);
+    const internalContext: Context<ContextData> = federation.createContext(new URL(`${process.env.DOMAIN}`), contextData) as Context<ContextData>;
+    const externalContext: Context<ContextData> = federation.createContext(new URL(externalActorInformation.id), contextData) as Context<ContextData>;
+    const externalActor = await externalContext.lookupObject(handle);
+
+    let activityResponse;
 
     if (!isActor(externalActor)) {
       return res.status(400).send('Invalid actor handle or URL');
     }
 
-    const activityDetails: ActivityDetails = {
-      actor: savedActor?.uri!,
-      object: `${externalActor.id}`,
-      domain: (new URL(savedActor?.uri!)).origin,
-      username: username,
-      type: 'follow'
+    switch (activity.toLowerCase()) {
+      case 'follow':
+        activityResponse = await sendFollow(externalActor, internalContext, username);
+        break;
+      case 'unfollow':
+        activityResponse = await sendUnfollow(externalActor, internalContext, username);
+        break;
     }
-    await internalContext.sendActivity(
-      { username: username },
-      externalActor satisfies Recipient,
-      new Follow({
-        id: new URL(createActivityId(activityDetails)),
-        actor: new URL(savedActor?.uri || ""),
-        object: externalActor.id,
-        to: externalActor.id,
-      })
-    );
 
-    return res.status(200).send('Successfully sent a follow request');
+    return res.status(200).json(activityResponse);
     } catch (error) {
     console.error(error);
-    return res.status(500).send('Internal server error');
+    return res.status(500).json({error: 'Internal server error'});
    }
 });
 
-router.post('/:username/unfollow', async (req, res) => {
-  const username = req.params.username;
-  const handle = req.body.actor;
-
-  const domainUsername = extractUsernameAndDomain(handle);
-
-  const externalActorResponse = await fetch(`https://${domainUsername?.domain}users/${domainUsername?.username}`, {
-    method: 'GET',
-    headers: { 'Accept': 'application/activity+json' }
-  });
-  const externalActorInformation = await externalActorResponse.json();
-  
-  if (typeof handle !== 'string') {
-    return res.status(400).send('Invalid actor handle or URL');
-  }
-
+const sendUnfollow = async (externalActor: Actor, internalContext: Context<ContextData>, username: string) => {
   try {
-    const externalContext = federation.createContext(new URL(externalActorInformation.url), undefined);
-    const externalActor = await externalContext.lookupObject(handle.trim());
-    const savedActor = await findUserByHandle(username);
-    const internalContext = federation.createContext(new URL(savedActor?.uri!), undefined);
-
-    if (!isActor(externalActor)) {
-      return res.status(400).send('Invalid actor handle or URL');
-    }
-
-    const followObject = await ActivityModel.findOne({ type: 'Follow', to: externalActor.id }).sort({ updatedAt: -1 });
-
-    if(!followObject) return res.status(404).send(`Follow activity not found`);
-
     const activityDetails: ActivityDetails = {
-      actor: savedActor?.uri!,
+      actor: `${internalContext.getActorUri(username)}`,
       object: `${externalActor.id}`,
-      domain: (new URL(savedActor?.uri!)).origin,
+      domain: internalContext.getActorUri(username).origin,
       username: username,
       type: 'undo'
     }
 
+    const followObject  = await ActivityModel.findOne({ type: 'Follow', to: externalActor.id }).sort({ updatedAt: -1 });
+
+    if(!followObject) return 'No activity for actor';
+
     const unfollow = new Undo({
-        id: new URL(createActivityId(activityDetails)),
-        actor: new URL(savedActor?.uri || ""),
-        object: new URL(followObject?.object.id),
-        to: externalActor.id,
-      })
+      id: createActivityId(activityDetails),
+      actor: internalContext.getActorUri(username),
+      object: new URL(followObject?.object.id),
+      to: externalActor.id,
+    })
     await internalContext.sendActivity(
       { username: username },
-      externalActor satisfies Recipient,
+      externalActor,
       unfollow
     );
 
     const undoFollow = new ActivityModel({
       _id: new mongoose.Types.ObjectId(),
       type: "Undo",
-      actor: new URL(savedActor?.uri || ""),
+      actor: internalContext.getActorUri(username),
       object: JSON.parse(JSON.stringify(unfollow)),
       to: externalActor.id,
     })
 
     await ActivityModel.findByIdAndDelete(followObject);
-    await undoFollow.save();
+    return await undoFollow.save();
+  } catch (error) {
+    return { error };
+  }};
 
-    return res.status(200).send(`Successfully unfollowed`);
-    } catch (error) {
+  const sendFollow = async (externalActor: Actor, internalContext: Context<unknown>, username: string): Promise<void> => {
+    try {
+      const activityDetails: ActivityDetails = {
+      actor: `${internalContext.getActorUri(username)}`,
+      object: `${externalActor.id}`,
+      domain: internalContext.getActorUri(username).origin,
+      username: username,
+      type: 'follow'
+    }
+    const follow = await internalContext.sendActivity(
+      { username: username },
+      externalActor,
+      new Follow({
+        id: new URL(createActivityId(activityDetails)),
+        actor: internalContext.getActorUri(username),
+        object: externalActor.id,
+    }));
+    return follow;
+  } catch (error) {
     console.error(error);
-    return res.status(500).send('Internal server error');
-   }
-});
-
-
-const extractUsernameAndDomain = (handle: string): {
-  username: string,
-  domain: string
-} | null => {
-  const match = handle.match(/^@?([^@]+)@([^@]+)$/);
-  if (match) {
-    return {
-      username: match[1],
-      domain: match[2]
-    };
+    return;
   }
-  return null;
-}
+ }
 
 type ActivityDetails = {
   actor: string,
@@ -166,15 +146,9 @@ type ActivityDetails = {
   type: string
 }
 
-const createActivityId = (activityDetails: ActivityDetails): string => {
-  const followActivity = {
-    '@context': 'https://www.w3.org/ns/activitystreams',
-    type: 'Follow',
-    actor: activityDetails.actor,
-    object: activityDetails.object
-  };
-  const hash = crypto.createHash('sha256').update(JSON.stringify(followActivity)).digest('hex');
-  return `${activityDetails.domain}/${activityDetails.username}#${activityDetails.type}/${hash}`;
+interface ContextData {
+  session: string;
+  actor: string;
 }
 
 export default router;
