@@ -116,6 +116,12 @@ function App() {
                 />
               }
             />
+            <Route
+              path="/profile"
+              element={
+                <ProfilePage />
+              }
+            />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />

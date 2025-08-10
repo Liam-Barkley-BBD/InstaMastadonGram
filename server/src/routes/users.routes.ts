@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import federation from "../services/federation.ts";
-import { Follow, isActor, Undo, type Actor, type Context, type Federation, type Recipient } from "@fedify/fedify";
+import { Follow, isActor, Undo, type Actor, type Context } from "@fedify/fedify";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
 import ActivityModel from "../models/activity.model.ts";
 import mongoose from "mongoose";

@@ -1,7 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import type { GetFollowersResponse } from "../../types";
+import React, { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { FedifyHandler } from "../../fedify/fedify";
+import { Search } from "lucide-react";
+import useAuth from "../../services/user.service";
+import { UserCard } from "../../components/UserCard";
+import { userSearchService } from "../../fedify/searchUsers";
+
+interface GetFollowersResponse {
+  orderedItems: string[];
+}
 
 interface HandleWithUrl {
   handle: string;
@@ -37,54 +44,172 @@ interface FollowersPageProps {
   isFollowers: boolean;
 }
 
-const FollowersPage: React.FC<FollowersPageProps> = ({isFollowers= false}) => {
+const FollowersPage: React.FC<FollowersPageProps> = ({
+  isFollowers = false,
+}) => {
+  const navigate = useNavigate();
   const { handle } = useParams<{ handle: string }>();
-  const [followers, setFollowers] = useState<HandleWithUrl[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setLoading] = useState(true);
+  const { user: currentUser } = useAuth();
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [, setError] = useState<string | null>(null);
+  const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
 
-  const fedify = new FedifyHandler();
-  const endpoint = isFollowers ? "followers" : "following";
+  const handleUserClick = useCallback(
+    (userId: string) => {
+      const foundUser = searchResults.find((u) => u.id === userId);
+      if (foundUser) {
+        navigate(`/profile?user=${foundUser.url}`)
+      }
+    },
+    [searchResults, navigate]
+  );
+
   useEffect(() => {
+    console.log(currentUser);
     if (!handle) return;
 
+    const controller = new AbortController();
+    const fedify = new FedifyHandler();
+    const endpoint = isFollowers ? "followers" : "following";
+
     const fetchFollowers = async () => {
-      try { 
-        const res = await fedify.getAccountFollowers(endpoint, encodeURIComponent(handle)) as GetFollowersResponse;
-        setFollowers(extractHandlesWithUrls(res));
+      setLoading(true);
+      setSearchResults([]);
+
+      try {
+        const res = (await fedify.getAccountFollowers(
+          endpoint,
+          encodeURIComponent(handle)
+        )) as GetFollowersResponse;
+
+        const handles = extractHandlesWithUrls(res);
+        const users: any[] = [];
+        const errors: any[] = [];
+
+        for (const h of handles) {
+          if (controller.signal.aborted) return;
+
+          try {
+            const results = await userSearchService.searchUsers(
+              h.handle.slice(1)
+            );
+
+            if (results && results.at(0)) {
+              const user = results.at(0);
+              users.push(user);
+              setSearchResults([...users]);
+            }
+          } catch (err) {
+            errors.push(err);
+          }
+        }
       } catch (err) {
         console.error(err);
-        setFollowers([]);
+        setSearchResults([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchFollowers();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
+  const handleFollow = useCallback(
+    async (userId: string) => {
+      const isCurrentlyFollowing = followingUsers.has(userId);
+      const userToFollow = searchResults.find((u) => u.id === userId);
+
+      if (!userToFollow?.url || !currentUser?.handle) {
+        setError("Missing required user information");
+        return;
+      }
+
+      try {
+        setFollowingUsers((prev) => {
+          const newSet = new Set(prev);
+          isCurrentlyFollowing ? newSet.delete(userId) : newSet.add(userId);
+          return newSet;
+        });
+      } catch {
+        setFollowingUsers((prev) => {
+          const newSet = new Set(prev);
+          isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
+          return newSet;
+        });
+
+        setError(
+          `Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`
+        );
+      }
+    },
+    [followingUsers, searchResults, currentUser]
+  );
+
   return (
-    <div style={{ padding: "1rem", fontFamily: "sans-serif" }}>
-      <h1>{isFollowers? "Followers" : "Following"} {handle}</h1>
-      {loading ? (
-        <p>Loading...</p>
-      ) : followers.length === 0 ? (
-        <p>No followers found.</p>
-      ) : (
-        <ul>
-          {followers.map((follower, index) => (
-            <li key={index} style={{ padding: "0.25rem 0" }}>
-              <a
-                href={follower.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: "none", color: "blue" }}
-              >
-                {follower.handle}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="page-container">
+      <div className="container">
+        <header className="header">
+          <div>
+            <h1>
+              {isFollowers
+                ? `${handle}'s followers`
+                : `People ${handle}'s following`}
+            </h1>
+          </div>
+        </header>
+
+        <section className="mb-8">
+          <h2 className="section-title mb-4">
+            {isLoading ? "Loading..." : null}
+          </h2>
+
+          {isLoading ? (
+            <div className="results-list">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card">
+                  <div className="skeleton-container">
+                    <div className="skeleton skeleton-avatar"></div>
+                    <div className="skeleton-content">
+                      <div className="skeleton skeleton-text skeleton-text-wide"></div>
+                      <div className="skeleton skeleton-text-small skeleton-text-narrow"></div>
+                    </div>
+                    <div className="skeleton skeleton-button"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="results-list">
+              {searchResults.map((user: any) => (
+                <UserCard
+                  key={user.id || user.username || Math.random()}
+                  user={user}
+                  isFollowing={followingUsers.has(user.id)}
+                  isLoading={isLoading}
+                  onFollow={handleFollow}
+                  onUserClick={handleUserClick}
+                  currentUser={currentUser}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="card empty-state">
+              <div className="empty-icon">
+                <Search size={32} style={{ color: "#9ca3af" }} />
+              </div>
+              <p className="empty-title">No users found</p>
+              <p className="empty-description">Try different search terms</p>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };
