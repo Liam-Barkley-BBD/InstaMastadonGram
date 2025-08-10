@@ -147,7 +147,7 @@ const ProfilePage = ({ handle }: Props) => {
         const data = await resp.json();
         const items: string[] = data.orderedItems || [];
 
-        const profileNormalized = normalizeUrl(profile.url || profile.id);
+        const profileNormalized = normalizeUrl(profile.id);
         console.log(profile);
         console.log(profileNormalized);
         const found = items.some((itemUrl: string) => {
