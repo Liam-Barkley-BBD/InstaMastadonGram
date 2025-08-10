@@ -1,13 +1,15 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import './styles/ProfilePage.css';
-import { FedifyHandler } from '../fedify/fedify';
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
+
+import "./styles/ProfilePage.css";
+import { FedifyHandler } from "../fedify/fedify";
 // import { follow } from '../services/activities.service';
-import useAuth from '../services/user.service';
-import PostModal from '../components/PostModal';
+import useAuth from "../services/user.service";
+import PostModal from "../components/PostModal";
 
 interface Props {
   handle: string;
-  isProfileTab:boolean;
+  isProfileTab: boolean;
 }
 
 interface User {
@@ -55,18 +57,18 @@ interface UserProfile {
 }
 
 const ProfilePage = ({ handle }: Props) => {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMorePosts, setHasMorePosts] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [authLoaded, setAuthLoaded] = useState(false);
-  
+ const { user } = useAuth();
+ const [profile, setProfile] = useState<UserProfile | null>(null);
+ const [posts, setPosts] = useState<any[]>([]);
+ const [loading, setLoading] = useState(true);
+ const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+ const [error, setError] = useState<string | null>(null);
+ const [currentPage, setCurrentPage] = useState(1);
+ const [hasMorePosts, setHasMorePosts] = useState(false);
+ const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+ const [isModalOpen, setIsModalOpen] = useState(false);
+ const [authLoaded, setAuthLoaded] = useState(false);
+
   const fedifyHandler = useRef(new FedifyHandler());
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -80,20 +82,22 @@ const ProfilePage = ({ handle }: Props) => {
   const isViewingOwnProfile = authLoaded && user?.url === handle;
 
   useEffect(() => {
-
     const fetchProfile = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const profileData: any = await fedifyHandler.current.getProfile(undefined,handle);
+        const profileData: any = await fedifyHandler.current.getProfile(
+          undefined,
+          handle
+        );
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
         setCurrentPage(1);
       } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        console.error("Error fetching profile:", err);
+        setError(err instanceof Error ? err.message : "Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -116,14 +120,14 @@ const ProfilePage = ({ handle }: Props) => {
       );
 
       if (morePostsData.items && morePostsData.items.length > 0) {
-        setPosts(prevPosts => [...prevPosts, ...morePostsData.items]);
+        setPosts((prevPosts) => [...prevPosts, ...morePostsData.items]);
         setCurrentPage(nextPage);
         setHasMorePosts(morePostsData.hasNextPage);
       } else {
         setHasMorePosts(false);
       }
     } catch (err) {
-      console.error('Error loading more posts:', err);
+      console.error("Error loading more posts:", err);
     } finally {
       setLoadingMorePosts(false);
     }
@@ -141,7 +145,7 @@ const ProfilePage = ({ handle }: Props) => {
       },
       {
         threshold: 0.1,
-        rootMargin: '100px'
+        rootMargin: "100px",
       }
     );
 
@@ -168,152 +172,162 @@ const ProfilePage = ({ handle }: Props) => {
     setSelectedPost(null);
   };
 
-const renderPostContent = (
-  textContent: string | PostContent[] | PostContent, 
-  mediaContent: string | PostContent[] | PostContent
-) => {
-  return (
-    <div className="post-content">
-      {/* Render text content */}
-      {textContent && (
-        <div className="post-text">
-          {typeof textContent === 'string' ? (
-            <p>{textContent.replace(/<[^>]*>/g, '')}</p>
-          ) : (
-            <p>Text content available</p>
-          )}
-        </div>
-      )}
-
-      {/* Render media content (images and videos) */}
-      {renderMediaContent(mediaContent)}
-    </div>
-  );
-};
-
-const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) => {
-  // Helper function to check if content is an image
-  const isImage = (item: PostContent) => {
-    return (item.type === 'Document' || item.type === 'Image') && 
-           item.mediaType?.startsWith('image/');
-  };
-
-  // Helper function to check if content is a video
-  const isVideo = (item: PostContent) => {
-    return (item.type === 'Document' || item.type === 'Video') && 
-           item.mediaType?.startsWith('video/');
-  };
-
-  // Handle single PostContent object
-  if (typeof mediaContent === 'object' && mediaContent !== null && !Array.isArray(mediaContent)) {
-    if (isImage(mediaContent)) {
-      return (
-        <div className="post-image">
-          <img 
-            src={mediaContent.url} 
-            alt={mediaContent.name || 'Post image'} 
-            loading="lazy"
-            style={{
-              width: '100%',
-              height: 'auto',
-              maxHeight: '400px',
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }}
-          />
-        </div>
-      );
-    }
-    
-    if (isVideo(mediaContent)) {
-      return (
-        <div className="post-video">
-          <video 
-            src={mediaContent.url}
-            controls
-            preload="metadata"
-            style={{
-              width: '100%',
-              height: 'auto',
-              maxHeight: '400px',
-              objectFit: 'contain',
-              borderRadius: '8px'
-            }}
-            aria-label={mediaContent.name || 'Post video'}
-          >
-            <source src={mediaContent.url} type={mediaContent.mediaType} />
-            Your browser does not support the video tag.
-          </video>
-          {mediaContent.name && (
-            <div className="video-overlay">
-              <div className="play-button">▶</div>
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  }
-
-  // Handle array of PostContent objects
-  if (Array.isArray(mediaContent)) {
+  const renderPostContent = (
+    textContent: string | PostContent[] | PostContent,
+    mediaContent: string | PostContent[] | PostContent
+  ) => {
     return (
-      <>
-        {mediaContent.map((item, index) => {
-          if (isImage(item)) {
-            return (
-              <div key={index} className="post-image">
-                <img 
-                  src={item.url} 
-                  alt={item.name || 'Post image'} 
-                  loading="lazy"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    maxHeight: '400px',
-                    objectFit: 'contain',
-                    borderRadius: '8px'
-                  }}
-                />
-              </div>
-            );
-          }
-          
-          if (isVideo(item)) {
-            return (
-              <div key={index} className="post-video">
-                <video 
-                  src={item.url}
-                  controls
-                  preload="metadata"
-                  style={{
-                    width: '100%',
-                    height: 'auto',
-                    maxHeight: '400px',
-                    objectFit: 'contain',
-                    borderRadius: '8px'
-                  }}
-                  aria-label={item.name || 'Post video'}
-                >
-                  <source src={item.url} type={item.mediaType} />
-                  Your browser does not support the video tag.
-                </video>
-                {item.name && (
-                  <div className="video-overlay">
-                    <div className="play-button">▶</div>
-                  </div>
-                )}
-              </div>
-            );
-          }
-          return null;
-        })}
-      </>
-    );
-  }
+      <div className="post-content">
+        {/* Render text content */}
+        {textContent && (
+          <div className="post-text">
+            {typeof textContent === "string" ? (
+              <p>{textContent.replace(/<[^>]*>/g, "")}</p>
+            ) : (
+              <p>Text content available</p>
+            )}
+          </div>
+        )}
 
-  return null;
-};
+        {/* Render media content (images and videos) */}
+        {renderMediaContent(mediaContent)}
+      </div>
+    );
+  };
+
+  const renderMediaContent = (
+    mediaContent: string | PostContent[] | PostContent
+  ) => {
+    // Helper function to check if content is an image
+    const isImage = (item: PostContent) => {
+      return (
+        (item.type === "Document" || item.type === "Image") &&
+        item.mediaType?.startsWith("image/")
+      );
+    };
+
+    // Helper function to check if content is a video
+    const isVideo = (item: PostContent) => {
+      return (
+        (item.type === "Document" || item.type === "Video") &&
+        item.mediaType?.startsWith("video/")
+      );
+    };
+
+    // Handle single PostContent object
+    if (
+      typeof mediaContent === "object" &&
+      mediaContent !== null &&
+      !Array.isArray(mediaContent)
+    ) {
+      if (isImage(mediaContent)) {
+        return (
+          <div className="post-image">
+            <img
+              src={mediaContent.url}
+              alt={mediaContent.name || "Post image"}
+              loading="lazy"
+              style={{
+                width: "100%",
+                height: "auto",
+                maxHeight: "400px",
+                objectFit: "contain",
+                borderRadius: "8px",
+              }}
+            />
+          </div>
+        );
+      }
+
+      if (isVideo(mediaContent)) {
+        return (
+          <div className="post-video">
+            <video
+              src={mediaContent.url}
+              controls
+              preload="metadata"
+              style={{
+                width: "100%",
+                height: "auto",
+                maxHeight: "400px",
+                objectFit: "contain",
+                borderRadius: "8px",
+              }}
+              aria-label={mediaContent.name || "Post video"}
+            >
+              <source src={mediaContent.url} type={mediaContent.mediaType} />
+              Your browser does not support the video tag.
+            </video>
+            {mediaContent.name && (
+              <div className="video-overlay">
+                <div className="play-button">▶</div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      return null;
+    }
+
+    // Handle array of PostContent objects
+    if (Array.isArray(mediaContent)) {
+      return (
+        <>
+          {mediaContent.map((item, index) => {
+            if (isImage(item)) {
+              return (
+                <div key={index} className="post-image">
+                  <img
+                    src={item.url}
+                    alt={item.name || "Post image"}
+                    loading="lazy"
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      maxHeight: "400px",
+                      objectFit: "contain",
+                      borderRadius: "8px",
+                    }}
+                  />
+                </div>
+              );
+            }
+
+            if (isVideo(item)) {
+              return (
+                <div key={index} className="post-video">
+                  <video
+                    src={item.url}
+                    controls
+                    preload="metadata"
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      maxHeight: "400px",
+                      objectFit: "contain",
+                      borderRadius: "8px",
+                    }}
+                    aria-label={item.name || "Post video"}
+                  >
+                    <source src={item.url} type={item.mediaType} />
+                    Your browser does not support the video tag.
+                  </video>
+                  {item.name && (
+                    <div className="video-overlay">
+                      <div className="play-button">▶</div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            return null;
+          })}
+        </>
+      );
+    }
+
+    return null;
+  };
 
   if (loading) {
     return (
@@ -354,7 +368,10 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
             <section className="gallery">
               <div className="gallery-grid">
                 {Array.from({ length: 6 }, (_, index) => (
-                  <div key={index} className="skeleton skeleton-gallery-item"></div>
+                  <div
+                    key={index}
+                    className="skeleton skeleton-gallery-item"
+                  ></div>
                 ))}
               </div>
             </section>
@@ -376,32 +393,41 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
     <>
       <div className="main-content-inner profile-container">
         <main className="profile-page">
-
           <article className="profile-content">
             <section className="profile-info">
               <figure className="profile-avatar">
                 {profile.avatar ? (
-                  <img src={profile.avatar} alt="Profile Avatar" className="avatar-large" />
+                  <img
+                    src={profile.avatar}
+                    alt="Profile Avatar"
+                    className="avatar-large"
+                  />
                 ) : (
                   <span className="avatar-large" />
                 )}
               </figure>
               <div className="profile-details">
                 <h1>{profile.displayName || profile.username}</h1>
-                <p className="username">@{profile.username}@{new URL(profile.id).hostname}</p>
+                <p className="username">
+                  @{profile.username}@{new URL(profile.id).hostname}
+                </p>
                 <div className="stats">
                   <div className="stat">
                     <strong>{profile.postsCount}</strong>
                     <span>Posts</span>
                   </div>
-                  <div className="stat">
-                    <strong>{profile.followersCount}</strong>
-                    <span>Followers</span>
-                  </div>
-                  <div className="stat">
-                    <strong>{profile.followingCount}</strong>
-                    <span>Following</span>
-                  </div>
+                  <Link to={`/users/${profile.username}/followers`}>
+                    <div className="stat">
+                      <strong>{profile.followersCount}</strong>
+                      <span>Followers</span>
+                    </div>
+                  </Link>
+                  <Link to={`/users/${profile.username}/following`}>
+                    <div className="stat">
+                      <strong>{profile.followingCount}</strong>
+                      <span>Following</span>
+                    </div>
+                  </Link>
                 </div>
                 <div className="actions">
                   {authLoaded && !isViewingOwnProfile && (
@@ -416,12 +442,17 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
                 <>
                   <div className="gallery-grid">
                     {posts.map((post, index) => (
-                      <article 
-                        key={post.id || index} 
+                      <article
+                        key={post.id || index}
                         className="gallery-item clickable-post"
                         onClick={() => handlePostClick(post)}
                       >
-                        {renderPostContent(post.textcontent, post.imagecontent || post.videocontent || post.mediacontent)}
+                        {renderPostContent(
+                          post.textcontent,
+                          post.imagecontent ||
+                            post.videocontent ||
+                            post.mediacontent
+                        )}
                         <div className="post-meta">
                           <span className="post-date">
                             {new Date(post.publishedDate).toLocaleDateString()}
@@ -436,7 +467,10 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
                         <div className="loading-more">
                           <div className="skeleton-grid">
                             {Array.from({ length: 4 }, (_, index) => (
-                              <div key={index} className="skeleton skeleton-gallery-item"></div>
+                              <div
+                                key={index}
+                                className="skeleton skeleton-gallery-item"
+                              ></div>
                             ))}
                           </div>
                         </div>
@@ -458,8 +492,13 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
           </article>
         </main>
       </div>
-      
-    <PostModal isOpen={isModalOpen} post={selectedPost} profile={profile} onClose={closeModal} />    </>
+      <PostModal
+        isOpen={isModalOpen}
+        post={selectedPost}
+        profile={profile}
+        onClose={closeModal}
+      />{" "}
+    </>
   );
 };
 

@@ -231,6 +231,19 @@ export class FedifyHandler {
         return profileData as UserProfile;
     };
 
+  public getAccountFollowers = async (
+    endpoint: string="followers",
+    handle: string
+  ): Promise<GetFollowersResponse> => {
+    const rawProfile = (await this.makeRequest(
+      `${this.EXPRESS_URL}/${endpoint}?handle=${handle}`,
+      {},
+      0,
+      false
+    )) as GetFollowersResponse;
+    return rawProfile;
+  };
+
     // New method to get just the counts - now supports both handle and uri
     private getProfileCounts = async (handle?: string, followerUrl?: string, followingUrl?:string, outboxUrl?:string): Promise<{
         followersCount: number;

@@ -5,6 +5,7 @@ import Login from './pages/LoginPage';
 import ProfilePage from "./pages/ProfilePage";
 import SearchUsersPage from "./pages/SearchUsers";
 import UploadMediaPage from "./pages/Uploadpage";
+import FollowersPage from "./pages/profilePage/FollowersPage";
 import './App.css';
 import useAuth from "./services/auth.service";
 import { FedifyHandler } from "./fedify/fedify";
@@ -106,10 +107,26 @@ function App() {
               path="/me"
               element={<ProfilePage handle={user?.url} isProfileTab={true} />}
             />
-            <Route path="/me" element={<ProfilePage handle = {fedify.extractUsername(user?.handle)} isProfileTab = {true}/>} />
+            <Route
+              path="/me"
+              element={
+                <ProfilePage
+                  handle={fedify.extractUsername(user?.handle)}
+                  isProfileTab={true}
+                />
+              }
+            />
             <Route path="/search" element={<SearchUsersPage />} />
             <Route path="/create" element={<UploadMediaPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route
+              path="/users/:handle/followers"
+              element={<FollowersPage isFollowers={true} />}
+            />
+            <Route
+              path="/users/:handle/following"
+              element={<FollowersPage isFollowers={false} />}
+            />
           </Routes>
         </div>
       </main>
@@ -120,7 +137,9 @@ function App() {
           <button
             key={item.id}
             onClick={() => handleNavigation(item.path)}
-            className={`beegram-mobile-nav-btn ${isActive(item.path) ? 'active' : ''}`}
+            className={`beegram-mobile-nav-btn ${
+              isActive(item.path) ? "active" : ""
+            }`}
           >
             <item.icon size={24} />
             <span className="beegram-mobile-nav-label">{item.label}</span>
