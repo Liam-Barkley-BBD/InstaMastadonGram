@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, memo } from "react";
+import { useState, useCallback, useRef, memo, useEffect } from "react";
 import { Search, UserPlus, UserCheck, Users2 } from "lucide-react";
 import { userSearchService } from "../fedify/searchUsers";
 import "./styles/SearchUsers.css";
@@ -6,6 +6,7 @@ import ProfilePage from "./ProfilePage";
 import useAuth from "../services/user.service";
 import { follow } from "../services/activities.service";
 import { actorUrlToHandle } from "../utils/helper.function";
+import type { UserProfile } from "../types";
 
 interface UserCardProps {
   user: any;
@@ -122,6 +123,7 @@ UserCard.displayName = 'UserCard';
 
 const SearchUsersPage = () => {
   const { user: currentUser } = useAuth();
+  const [recentSearches, setRecentSearches] = useState<UserProfile[]>([]);
   const [viewingProfile, setViewingProfile] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -135,12 +137,19 @@ const SearchUsersPage = () => {
     return /^[^@]+@[^@]+$/.test(query.trim());
   };
 
-  const handleUserClick = useCallback((userId: string) => {
-    const foundUser = searchResults.find(u => u.id === userId);
-    if (foundUser) {
-      setViewingProfile(foundUser);
+ const loadRecentSearches = useCallback(async () => {
+    try {
+      const recent = await userSearchService.getRecentSearches(currentUser?.handle);
+      const parsed = recent.recent_searches.map(item => JSON.parse(JSON.parse(item)));
+      setRecentSearches(parsed);
+    } catch (error) {
+      console.warn("Failed to load recent searches:", error);
     }
-  }, [searchResults]);
+  }, [currentUser?.handle]);
+
+   useEffect(() => {
+    loadRecentSearches();
+  }, [loadRecentSearches]);
 
   const handleBackToList = useCallback(() => {
     setViewingProfile(null);
@@ -218,6 +227,9 @@ const SearchUsersPage = () => {
     );
   }
 
+  const resultsToShow = searchQuery ? searchResults : recentSearches;
+
+
   return (
     <div className="page-container">
       <div className="container">
@@ -264,7 +276,7 @@ const SearchUsersPage = () => {
         {hasSearched && (
           <section className="mb-8">
             <h2 className="section-title mb-4">
-              {isLoading ? "Searching..." : `Results (${searchResults.length})`}
+              {isLoading ? "Searching..." : `Results (${resultsToShow.length})`}
             </h2>
 
             {isLoading ? (
@@ -282,9 +294,9 @@ const SearchUsersPage = () => {
                   </div>
                 ))}
               </div>
-            ) : searchResults.length > 0 ? (
+            ) : resultsToShow.length > 0 ? (
               <div className="results-list">
-                {searchResults.map((user: any) => (
+                {resultsToShow.map((user: any) => (
                   <UserCard
                     key={user.id || user.username || Math.random()}
                     user={user}
