@@ -55,7 +55,7 @@ interface UserProfile {
   postsCount: number;
 }
 
-const ProfilePage = ({ handle, isProfileTab }: Props) => {
+const ProfilePage = ({ handle }: Props) => {
   const { user } = useAuth();
   const isViewingOwnProfile = isCurrentUser(user?.handle || '');
   const [profile, setProfile] = useState<UserProfile | null>(null);
