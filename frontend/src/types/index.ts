@@ -15,3 +15,9 @@ export type BasicUserProfile = {
   username: string;
   avatar: string;
 };
+
+export interface GetFollowersResponse {
+  totalItems: number;
+  orderedItems: string[];
+  pagesLoaded: number;
+}

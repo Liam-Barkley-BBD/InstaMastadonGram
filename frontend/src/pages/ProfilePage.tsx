@@ -1,13 +1,14 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import './styles/ProfilePage.css';
-import { FedifyHandler } from '../fedify/fedify';
-import { follow } from '../services/activities.service';
-import useAuth from '../services/user.service';
-import PostModal from '../components/PostModal';
+import { useEffect, useState, useCallback, useRef } from "react";
+import "./styles/ProfilePage.css";
+import { FedifyHandler } from "../fedify/fedify";
+import { follow } from "../services/activities.service";
+import useAuth from "../services/user.service";
+import PostModal from "../components/PostModal";
+import { Link, useSearchParams } from "react-router-dom";
 
 interface Props {
-  handle: string;
-  isProfileTab:boolean;
+  handle?: string;
+  isProfileTab?: boolean;
 }
 
 interface User {
@@ -55,16 +56,16 @@ interface UserProfile {
 }
 
 function removeForwardSlashes(str: string) {
-  return str.replace(/\//g, '');
+  return str.replace(/\//g, "");
 }
 
 function normalizeUrl(u?: string) {
   if (!u) return u;
   try {
     const url = new URL(u);
-    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
   } catch {
-    return u.replace(/\/+$/, '');
+    return u.replace(/\/+$/, "");
   }
 }
 
@@ -80,10 +81,11 @@ const ProfilePage = ({ handle }: Props) => {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [authLoaded, setAuthLoaded] = useState(false);
-
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
+
+  const url = useSearchParams();
 
   const fedifyHandler = useRef(new FedifyHandler());
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -98,19 +100,26 @@ const ProfilePage = ({ handle }: Props) => {
   const isViewingOwnProfile = authLoaded && user?.url === handle;
 
   useEffect(() => {
+    if (url[0].size === 1) {
+      handle = url[0].get("user") as string;
+    }
+    
     const fetchProfile = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const profileData: any = await fedifyHandler.current.getProfile(undefined,handle);
+        const profileData: any = await fedifyHandler.current.getProfile(
+          undefined,
+          handle
+        );
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
         setCurrentPage(1);
       } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        console.error("Error fetching profile:", err);
+        setError(err instanceof Error ? err.message : "Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -129,7 +138,7 @@ const ProfilePage = ({ handle }: Props) => {
       setIsFollowLoading(true);
       setFollowError(null);
       try {
-        const base = user.url ? user.url.replace(/\/+$/, '') : user.url;
+        const base = user.url ? user.url.replace(/\/+$/, "") : user.url;
         const followingUrl = `${base}/following?cursor=1`;
 
         const resp = await fetch(followingUrl, {
@@ -170,7 +179,6 @@ const ProfilePage = ({ handle }: Props) => {
     };
   }, [authLoaded, user, profile, isViewingOwnProfile]);
 
-
   const loadMorePosts = useCallback(async () => {
     if (!profile || loadingMorePosts || !hasMorePosts) return;
 
@@ -185,14 +193,14 @@ const ProfilePage = ({ handle }: Props) => {
       );
 
       if (morePostsData.items && morePostsData.items.length > 0) {
-        setPosts(prevPosts => [...prevPosts, ...morePostsData.items]);
+        setPosts((prevPosts) => [...prevPosts, ...morePostsData.items]);
         setCurrentPage(nextPage);
         setHasMorePosts(morePostsData.hasNextPage);
       } else {
         setHasMorePosts(false);
       }
     } catch (err) {
-      console.error('Error loading more posts:', err);
+      console.error("Error loading more posts:", err);
     } finally {
       setLoadingMorePosts(false);
     }
@@ -210,7 +218,7 @@ const ProfilePage = ({ handle }: Props) => {
       },
       {
         threshold: 0.1,
-        rootMargin: '100px'
+        rootMargin: "100px",
       }
     );
 
@@ -238,7 +246,7 @@ const ProfilePage = ({ handle }: Props) => {
   };
 
   const renderPostContent = (
-    textContent: string | PostContent[] | PostContent, 
+    textContent: string | PostContent[] | PostContent,
     mediaContent: string | PostContent[] | PostContent
   ) => {
     return (
@@ -246,8 +254,8 @@ const ProfilePage = ({ handle }: Props) => {
         {/* Render text content */}
         {textContent && (
           <div className="post-text">
-            {typeof textContent === 'string' ? (
-              <p>{textContent.replace(/<[^>]*>/g, '')}</p>
+            {typeof textContent === "string" ? (
+              <p>{textContent.replace(/<[^>]*>/g, "")}</p>
             ) : (
               <p>Text content available</p>
             )}
@@ -260,55 +268,65 @@ const ProfilePage = ({ handle }: Props) => {
     );
   };
 
-  const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) => {
-  // Helper function to check if content is an image
+  const renderMediaContent = (
+    mediaContent: string | PostContent[] | PostContent
+  ) => {
+    // Helper function to check if content is an image
     const isImage = (item: PostContent) => {
-      return (item.type === 'Document' || item.type === 'Image') && 
-             item.mediaType?.startsWith('image/');
+      return (
+        (item.type === "Document" || item.type === "Image") &&
+        item.mediaType?.startsWith("image/")
+      );
     };
 
-  // Helper function to check if content is a video
+    // Helper function to check if content is a video
     const isVideo = (item: PostContent) => {
-      return (item.type === 'Document' || item.type === 'Video') && 
-             item.mediaType?.startsWith('video/');
+      return (
+        (item.type === "Document" || item.type === "Video") &&
+        item.mediaType?.startsWith("video/")
+      );
     };
 
-      // Handle single PostContent object
-    if (typeof mediaContent === 'object' && mediaContent !== null && !Array.isArray(mediaContent)) {
+    // Handle single PostContent object
+    if (
+      typeof mediaContent === "object" &&
+      mediaContent !== null &&
+      !Array.isArray(mediaContent)
+    ) {
       if (isImage(mediaContent)) {
         return (
           <div className="post-image">
-            <img 
-              src={mediaContent.url} 
-              alt={mediaContent.name || 'Post image'} 
+            <img
+              src={mediaContent.url}
+              alt={mediaContent.name || "Post image"}
               loading="lazy"
               style={{
-                width: '100%',
-                height: 'auto',
-                maxHeight: '400px',
-                objectFit: 'contain',
-                borderRadius: '8px'
+                width: "100%",
+                height: "auto",
+                maxHeight: "400px",
+                objectFit: "contain",
+                borderRadius: "8px",
               }}
             />
           </div>
         );
       }
-      
+
       if (isVideo(mediaContent)) {
         return (
           <div className="post-video">
-            <video 
+            <video
               src={mediaContent.url}
               controls
               preload="metadata"
               style={{
-                width: '100%',
-                height: 'auto',
-                maxHeight: '400px',
-                objectFit: 'contain',
-                borderRadius: '8px'
+                width: "100%",
+                height: "auto",
+                maxHeight: "400px",
+                objectFit: "contain",
+                borderRadius: "8px",
               }}
-              aria-label={mediaContent.name || 'Post video'}
+              aria-label={mediaContent.name || "Post video"}
             >
               <source src={mediaContent.url} type={mediaContent.mediaType} />
               Your browser does not support the video tag.
@@ -324,7 +342,7 @@ const ProfilePage = ({ handle }: Props) => {
       return null;
     }
 
-      // Handle array of PostContent objects
+    // Handle array of PostContent objects
     if (Array.isArray(mediaContent)) {
       return (
         <>
@@ -332,37 +350,37 @@ const ProfilePage = ({ handle }: Props) => {
             if (isImage(item)) {
               return (
                 <div key={index} className="post-image">
-                  <img 
-                    src={item.url} 
-                    alt={item.name || 'Post image'} 
+                  <img
+                    src={item.url}
+                    alt={item.name || "Post image"}
                     loading="lazy"
                     style={{
-                      width: '100%',
-                      height: 'auto',
-                      maxHeight: '400px',
-                      objectFit: 'contain',
-                      borderRadius: '8px'
+                      width: "100%",
+                      height: "auto",
+                      maxHeight: "400px",
+                      objectFit: "contain",
+                      borderRadius: "8px",
                     }}
                   />
                 </div>
               );
             }
-            
+
             if (isVideo(item)) {
               return (
                 <div key={index} className="post-video">
-                  <video 
+                  <video
                     src={item.url}
                     controls
                     preload="metadata"
                     style={{
-                      width: '100%',
-                      height: 'auto',
-                      maxHeight: '400px',
-                      objectFit: 'contain',
-                      borderRadius: '8px'
+                      width: "100%",
+                      height: "auto",
+                      maxHeight: "400px",
+                      objectFit: "contain",
+                      borderRadius: "8px",
                     }}
-                    aria-label={item.name || 'Post video'}
+                    aria-label={item.name || "Post video"}
                   >
                     <source src={item.url} type={item.mediaType} />
                     Your browser does not support the video tag.
@@ -395,18 +413,19 @@ const ProfilePage = ({ handle }: Props) => {
 
     try {
       const userUrl = new URL(profile.url || profile.id);
-      const actorHandle = `${removeForwardSlashes(userUrl.pathname)}@${removeForwardSlashes(userUrl.hostname)}`;
+      const actorHandle = `${removeForwardSlashes(
+        userUrl.pathname
+      )}@${removeForwardSlashes(userUrl.hostname)}`;
 
       await follow({
         actorHandle,
         userName: user.handle,
-        activity: 'follow'
+        activity: "follow",
       });
-
     } catch (err) {
-      console.error('Failed to follow user:', err);
+      console.error("Failed to follow user:", err);
       setIsFollowing(false); // rollback
-      setFollowError('Failed to follow user. Please try again.');
+      setFollowError("Failed to follow user. Please try again.");
     } finally {
       setIsFollowLoading(false);
     }
@@ -451,7 +470,10 @@ const ProfilePage = ({ handle }: Props) => {
             <section className="gallery">
               <div className="gallery-grid">
                 {Array.from({ length: 6 }, (_, index) => (
-                  <div key={index} className="skeleton skeleton-gallery-item"></div>
+                  <div
+                    key={index}
+                    className="skeleton skeleton-gallery-item"
+                  ></div>
                 ))}
               </div>
             </section>
@@ -473,42 +495,61 @@ const ProfilePage = ({ handle }: Props) => {
     <>
       <div className="main-content-inner profile-container">
         <main className="profile-page">
-
           <article className="profile-content">
             <section className="profile-info">
               <figure className="profile-avatar">
                 {profile.avatar ? (
-                  <img src={profile.avatar} alt="Profile Avatar" className="avatar-large" />
+                  <img
+                    src={profile.avatar}
+                    alt="Profile Avatar"
+                    className="avatar-large"
+                  />
                 ) : (
                   <span className="avatar-large" />
                 )}
               </figure>
               <div className="profile-details">
                 <h1>{profile.displayName || profile.username}</h1>
-                <p className="username">@{profile.username}@{new URL(profile.id).hostname}</p>
+                <p className="username">
+                  @{profile.username}@{new URL(profile.id).hostname}
+                </p>
                 <div className="stats">
                   <div className="stat">
                     <strong>{profile.postsCount}</strong>
                     <span>Posts</span>
                   </div>
-                  <div className="stat">
-                    <strong>{profile.followersCount}</strong>
-                    <span>Followers</span>
-                  </div>
-                  <div className="stat">
-                    <strong>{profile.followingCount}</strong>
-                    <span>Following</span>
-                  </div>
+                  <Link to={`/users/${profile.username}/followers`}>
+                    <div className="stat">
+                      <strong>{profile.followersCount}</strong>
+                      <span>Followers</span>
+                    </div>
+                  </Link>
+                  <Link to={`/users/${profile.username}/following`}>
+                    <div className="stat">
+                      <strong>{profile.followingCount}</strong>
+                      <span>Following</span>
+                    </div>
+                  </Link>
                 </div>
                 <div className="actions">
                   {authLoaded && !isViewingOwnProfile && (
                     <button
-                      className={`follow-button ${isFollowing ? 'following' : ''}`}
+                      className={`follow-button ${
+                        isFollowing ? "following" : ""
+                      }`}
                       onClick={handleFollowClick}
                       disabled={isFollowLoading || isFollowing}
-                      aria-label={isFollowing ? `Following ${profile.username}` : `Follow ${profile.username}`}
+                      aria-label={
+                        isFollowing
+                          ? `Following ${profile.username}`
+                          : `Follow ${profile.username}`
+                      }
                     >
-                      {isFollowLoading ? '...' : (isFollowing ? 'Following' : 'Follow')}
+                      {isFollowLoading
+                        ? "..."
+                        : isFollowing
+                        ? "Following"
+                        : "Follow"}
                     </button>
                   )}
                   {followError && <p className="error-text">{followError}</p>}
@@ -521,12 +562,17 @@ const ProfilePage = ({ handle }: Props) => {
                 <>
                   <div className="gallery-grid">
                     {posts.map((post, index) => (
-                      <article 
-                        key={post.id || index} 
+                      <article
+                        key={post.id || index}
                         className="gallery-item clickable-post"
                         onClick={() => handlePostClick(post)}
                       >
-                        {renderPostContent(post.textcontent, post.imagecontent || post.videocontent || post.mediacontent)}
+                        {renderPostContent(
+                          post.textcontent,
+                          post.imagecontent ||
+                            post.videocontent ||
+                            post.mediacontent
+                        )}
                         <div className="post-meta">
                           <span className="post-date">
                             {new Date(post.publishedDate).toLocaleDateString()}
@@ -541,7 +587,10 @@ const ProfilePage = ({ handle }: Props) => {
                         <div className="loading-more">
                           <div className="skeleton-grid">
                             {Array.from({ length: 4 }, (_, index) => (
-                              <div key={index} className="skeleton skeleton-gallery-item"></div>
+                              <div
+                                key={index}
+                                className="skeleton skeleton-gallery-item"
+                              ></div>
                             ))}
                           </div>
                         </div>
@@ -563,8 +612,13 @@ const ProfilePage = ({ handle }: Props) => {
           </article>
         </main>
       </div>
-      
-    <PostModal isOpen={isModalOpen} post={selectedPost} profile={profile} onClose={closeModal} />    </>
+      <PostModal
+        isOpen={isModalOpen}
+        post={selectedPost}
+        profile={profile}
+        onClose={closeModal}
+      />
+    </>
   );
 };
 
