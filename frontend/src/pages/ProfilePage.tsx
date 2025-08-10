@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import './styles/ProfilePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 // import { follow } from '../services/activities.service';
-import { isCurrentUser } from '../services/user.service';
 import useAuth from '../services/user.service';
 import PostModal from '../components/PostModal';
 
@@ -57,7 +56,7 @@ interface UserProfile {
 
 const ProfilePage = ({ handle }: Props) => {
   const { user } = useAuth();
-  const isViewingOwnProfile = isCurrentUser(user?.handle || '');
+  const isViewingOwnProfile = user?.url === handle;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 export interface AuthenticatedUser {
   handle: string;
   inboxUri: string;
+  url:string
 }
 
 export default function useAuth() {
