@@ -4,36 +4,18 @@ import './styles/HomePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 import useAuth from '../services/user.service';
 
-// Define the Post type based on the provided Mastodon data structure
-// interface Post {
-//   id: string;
-//   imagecontent: Array<{
-//     url: string;
-//     name: string;
-//     mediaType: string;
-//     width: number;
-//     height: number;
-//   }>;
-//   textcontent: string;
-//   publishedDate: string;
-//   url: string;
-//   replies: number;
-//   shares: number;
-//   likes: number;
-// }
-
 const HomePage: React.FC = () => {
   const fedifyHandler = new FedifyHandler();
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const auth = useAuth();
 
-  // Fetch posts from FedifyHandler
   useEffect(() => {
     const fetchOptimizedFeed = async () => {
       try {
         setIsLoading(true);
         const optimizedFeed = await fedifyHandler.getFollowingPosts(
-          fedifyHandler.extractUsername(useAuth()?.user?.handle as string),
+          fedifyHandler.extractUsername(auth?.user?.handle as string),
           undefined,
           60, // limit
           25, // maxFollowingToFetch
@@ -47,8 +29,11 @@ const HomePage: React.FC = () => {
       }
     };
 
-    fetchOptimizedFeed();
-  }, []);
+    // Only fetch if we have auth data
+    if (auth?.user?.handle) {
+      fetchOptimizedFeed();
+    }
+  }, [auth?.user?.handle]); // Add dependency on auth data
 
   // Helper function to format timestamp
   const formatTimestamp = (dateString: string) => {
