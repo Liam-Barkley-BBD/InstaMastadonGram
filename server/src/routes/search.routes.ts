@@ -28,7 +28,7 @@ const safeRedisOperation = async <T>(
             return fallback;
         }
         return await operation();
-    } catch (error) {
+    } catch (error:any) {
         console.warn('Redis operation failed, using fallback:', error.message);
         return fallback;
     }
@@ -132,7 +132,7 @@ const discoverActorViaWebFinger = async (handle: string) => {
         }
 
         return await profileResponse.json();
-    } catch (error) {
+    } catch (error:any) {
         throw new Error(`WebFinger discovery failed: ${error.message}`);
     }
 };
@@ -149,7 +149,7 @@ export const findUserByHandle = async (handle: string): Promise<ActorDoc | null>
     }
 };
 
-router.get('/search/recent', async (req, res) => {
+router.get('/recent', async (req, res) => {
     try {
         const { handle } = req.query; // Assuming you have user authentication middleware
 
@@ -160,7 +160,7 @@ router.get('/search/recent', async (req, res) => {
             count: recentSearches.length
         });
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error getting recent searches:', error);
         res.status(500).json({ error: error.message });
     }
@@ -179,7 +179,7 @@ router.post('/recent', async (req, res) => {
 
         res.status(201).json({ message: 'Search term added to recent searches' });
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error adding to recent searches:', error);
         res.status(500).json({ error: error.message });
     }
@@ -187,7 +187,7 @@ router.post('/recent', async (req, res) => {
 
 
 // Clear user's recent searches
-router.delete('/search/recent', async (req, res) => {
+router.delete('/recent', async (req, res) => {
     try {
         const {handle} = req.query; // Assuming you have user authentication middleware
 
@@ -195,7 +195,7 @@ router.delete('/search/recent', async (req, res) => {
 
         res.json({ message: 'Recent searches cleared' });
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error clearing recent searches:', error);
         res.status(500).json({ error: error.message });
     }
@@ -210,7 +210,7 @@ router.get('/actors', async (req, res) => {
             return res.status(400).json({ error: 'Query parameter "q" is required' });
         }
 
-        await client.connect();
+        await mongoClient.connect();
 
         // Create text index on handle field if it doesn't exist
         try {
@@ -269,7 +269,7 @@ router.get('/actors', async (req, res) => {
             count: searchResults.length
         });
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error searching actors:', error);
         res.status(500).json({ error: error.message });
     }
@@ -318,8 +318,8 @@ router.get('/users', async (req, res) => {
                     source: 'remote'
                 };
 
-                results.remote = remoteActor;
-            } catch (webfingerError) {
+                results.remote = remoteActor as any;
+            } catch (webfingerError:any) {
                 console.warn('WebFinger lookup failed:', webfingerError.message);
                 // Don't return error, just no remote results
             }
@@ -329,7 +329,7 @@ router.get('/users', async (req, res) => {
 
         res.json(results);
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error searching users:', error);
         res.status(500).json({ error: error.message });
     }
@@ -372,7 +372,7 @@ router.get('/actor/:handle', async (req, res) => {
 
                 res.json(remoteActor);
 
-            } catch (webfingerError) {
+            } catch (webfingerError:any) {
                 res.status(404).json({
                     error: 'Actor not found locally or via WebFinger',
                     details: webfingerError.message
@@ -382,7 +382,7 @@ router.get('/actor/:handle', async (req, res) => {
             res.status(404).json({ error: 'Actor not found' });
         }
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error fetching actor:', error);
         res.status(500).json({ error: error.message });
     }
@@ -432,7 +432,7 @@ router.post('/actor/save', async (req, res) => {
             actor: savedActor
         });
 
-    } catch (error) {
+    } catch (error:any) {
         console.error('Error saving actor:', error);
         res.status(500).json({ error: error.message });
     }
