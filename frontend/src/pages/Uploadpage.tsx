@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, X, Image, Video, Camera, Smile } from "lucide-react";
+import { Upload, X, Image, Video, Camera } from "lucide-react";
 import "./styles/Uploadpage.css";
 // import { isCurrentUser } from "../services/user.service";
 import useAuth from "../services/user.service";
@@ -160,9 +160,6 @@ const UploadMediaPage = () => {
               maxLength={2200}
             />
             <div className="caption-footer">
-              <button>
-                <Smile size={20} />
-              </button>
               <span>{caption.length}/2200</span>
             </div>
           </div>

@@ -163,7 +163,7 @@ const ProfilePage = ({ handle, isProfileTab }: Props) => {
 
 const renderPostContent = (
   textContent: string | PostContent[] | PostContent, 
-  imageContent: string | PostContent[] | PostContent
+  mediaContent: string | PostContent[] | PostContent
 ) => {
   return (
     <div className="post-content">
@@ -178,21 +178,33 @@ const renderPostContent = (
         </div>
       )}
 
-      {/* Render image content */}
-      {renderImageContent(imageContent)}
+      {/* Render media content (images and videos) */}
+      {renderMediaContent(mediaContent)}
     </div>
   );
 };
 
-const renderImageContent = (imageContent: string | PostContent[] | PostContent) => {
+const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) => {
+  // Helper function to check if content is an image
+  const isImage = (item: PostContent) => {
+    return (item.type === 'Document' || item.type === 'Image') && 
+           item.mediaType?.startsWith('image/');
+  };
+
+  // Helper function to check if content is a video
+  const isVideo = (item: PostContent) => {
+    return (item.type === 'Document' || item.type === 'Video') && 
+           item.mediaType?.startsWith('video/');
+  };
+
   // Handle single PostContent object
-  if (typeof imageContent === 'object' && imageContent !== null && !Array.isArray(imageContent)) {
-    if ((imageContent.type === 'Document' || imageContent.type === 'Image') && imageContent.mediaType?.startsWith('image/')) {
+  if (typeof mediaContent === 'object' && mediaContent !== null && !Array.isArray(mediaContent)) {
+    if (isImage(mediaContent)) {
       return (
         <div className="post-image">
           <img 
-            src={imageContent.url} 
-            alt={imageContent.name || 'Post image'} 
+            src={mediaContent.url} 
+            alt={mediaContent.name || 'Post image'} 
             loading="lazy"
             style={{
               width: '100%',
@@ -205,15 +217,43 @@ const renderImageContent = (imageContent: string | PostContent[] | PostContent) 
         </div>
       );
     }
+    
+    if (isVideo(mediaContent)) {
+      return (
+        <div className="post-video">
+          <video 
+            src={mediaContent.url}
+            controls
+            preload="metadata"
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxHeight: '400px',
+              objectFit: 'contain',
+              borderRadius: '8px'
+            }}
+            aria-label={mediaContent.name || 'Post video'}
+          >
+            <source src={mediaContent.url} type={mediaContent.mediaType} />
+            Your browser does not support the video tag.
+          </video>
+          {mediaContent.name && (
+            <div className="video-overlay">
+              <div className="play-button">▶</div>
+            </div>
+          )}
+        </div>
+      );
+    }
     return null;
   }
 
   // Handle array of PostContent objects
-  if (Array.isArray(imageContent)) {
+  if (Array.isArray(mediaContent)) {
     return (
       <>
-        {imageContent.map((item, index) => {
-          if ((item.type === 'Document' || item.type === 'Image') && item.mediaType?.startsWith('image/')) {
+        {mediaContent.map((item, index) => {
+          if (isImage(item)) {
             return (
               <div key={index} className="post-image">
                 <img 
@@ -228,6 +268,34 @@ const renderImageContent = (imageContent: string | PostContent[] | PostContent) 
                     borderRadius: '8px'
                   }}
                 />
+              </div>
+            );
+          }
+          
+          if (isVideo(item)) {
+            return (
+              <div key={index} className="post-video">
+                <video 
+                  src={item.url}
+                  controls
+                  preload="metadata"
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    maxHeight: '400px',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                  aria-label={item.name || 'Post video'}
+                >
+                  <source src={item.url} type={item.mediaType} />
+                  Your browser does not support the video tag.
+                </video>
+                {item.name && (
+                  <div className="video-overlay">
+                    <div className="play-button">▶</div>
+                  </div>
+                )}
               </div>
             );
           }
@@ -274,7 +342,7 @@ const renderImageContent = (imageContent: string | PostContent[] | PostContent) 
                 </div>
                 <div className="bio">
                   <div className="skeleton skeleton-text skeleton-bio-line"></div>
-                  <div className="skeleton skeleton-text skeleton-bio-line skeleton-bio-short"></div>
+                  <div className="skeleton skeleton-text skeleton-bio-short"></div>
                 </div>
                 <div className="actions">
                   <div className="skeleton skeleton-button"></div>
@@ -359,7 +427,7 @@ const renderImageContent = (imageContent: string | PostContent[] | PostContent) 
                         className="gallery-item clickable-post"
                         onClick={() => handlePostClick(post)}
                       >
-                        {renderPostContent(post.textcontent, post.imagecontent)}
+                        {renderPostContent(post.textcontent, post.imagecontent || post.videocontent || post.mediacontent)}
                         <div className="post-meta">
                           <span className="post-date">
                             {new Date(post.publishedDate).toLocaleDateString()}
