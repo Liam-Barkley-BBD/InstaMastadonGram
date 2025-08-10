@@ -20,7 +20,8 @@ router.get('/me', async (req: Request, res: Response) => {
       googleId: user.googleId,
       name: user.name,
       email: user.email,
-      handle: user.handle
+      handle: user.handle,
+      url: user.url
     });
 
   } catch (error) {

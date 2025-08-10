@@ -12,5 +12,6 @@ export interface UserDoc extends Document {
   name: string;
   email: string;
   handle: string;
+  url: string;
 }
-export default mongoose.model<UserDoc>("User", userSchema);;
+export default mongoose.model("User", userSchema);;
