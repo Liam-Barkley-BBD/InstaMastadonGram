@@ -33,7 +33,7 @@
 .beegram-logo {
   font-size: 1.5rem;
   font-weight: 900;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -71,14 +71,14 @@
 
 .beegram-nav-btn:hover,
 .beegram-nav-btn.active {
-  background: rgba(251, 146, 60, 0.15);
-  color: #fb923c;
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
   transform: translateX(5px);
 }
 
 .beegram-nav-btn.active {
   font-weight: 700;
-  box-shadow: inset 4px 0 0 #fb923c;
+  box-shadow: inset 4px 0 0 #8b5cf6;
 }
 
 .beegram-nav-btn span {
@@ -110,7 +110,7 @@
   width: 45px;
   height: 45px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f97316, #fbbf24);
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,7 +149,7 @@
 .beegram-mobile-logo {
   font-size: 1.25rem;
   font-weight: 900;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -196,7 +196,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
 }
 
 .beegram-post-user .beegram-username {
@@ -287,7 +287,7 @@
 }
 
 .beegram-action-btn:hover {
-  color: #fb923c;
+  color: #8b5cf6;
 }
 
 .beegram-post-stats {
@@ -343,7 +343,7 @@
 
 .beegram-discover-btn {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
   color: #ffffff;
   border: none;
   border-radius: 0.75rem;
@@ -355,7 +355,7 @@
 
 .beegram-discover-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
 }
 
 .beegram-mobile-nav {
@@ -389,8 +389,8 @@
 }
 
 .beegram-mobile-nav-btn.active {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.2);
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.2);
 }
 
 .beegram-mobile-nav-label {
