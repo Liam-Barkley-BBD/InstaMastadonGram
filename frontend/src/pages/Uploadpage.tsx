@@ -85,6 +85,16 @@ const UploadMediaPage = () => {
     }
   };
 
+  if (!user?.handle) {
+    return (
+      <div className="upload-page loading-screen">
+        <div className="loading-container">
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="upload-page">
       <div className="upload-container">
@@ -95,7 +105,7 @@ const UploadMediaPage = () => {
           </div>
           <div className="upload-user-info">
             <div className="upload-avatar">U</div>
-            <span>@{user?.handle ?? "username"}</span>
+            <span>@{user.handle}</span>
           </div>
         </div>
 

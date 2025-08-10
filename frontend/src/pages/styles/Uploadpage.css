@@ -344,4 +344,31 @@
   .location {
     font-size: 1rem;
   }
+
+  .loading-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
+    text-align: center;
+    flex-direction: column;
+    color: #555;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #ddd;
+    border-top-color: #555;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
 }
