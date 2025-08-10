@@ -68,6 +68,52 @@ class UserSearchService {
       throw new Error("Failed to unfollow user. Please try again.");
     }
   }
+
+  async addRecentSearch(handle: string, profile: string): Promise<{ message: string }> {
+  try {
+    const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        handle,
+        profile
+      })
+    }, 0, false);
+
+    return response;
+  } catch (error) {
+    console.error("Failed to add recent search:", error);
+    throw new Error("Failed to save recent search. Please try again.");
+  }
 }
+
+  async getRecentSearches(handle:string): Promise<{ recent_searches: string[], count: number }> {
+    try {
+      const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent?handle=${handle}`, {
+        method: 'GET'
+      }, 0, false);
+      return response;
+    } catch (error) {
+      console.error("Failed to get recent searches:", error);
+      throw new Error("Failed to load recent searches. Please try again.");
+    }
+  }
+
+
+  async clearRecentSearches(handle:string): Promise<void> {
+    try {
+      await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent?handle=${handle}`, {
+        method: 'DELETE'
+      }, 0, false);
+    } catch (error) {
+      console.error("Failed to clear recent searches:", error);
+      throw new Error("Failed to clear recent searches. Please try again.");
+    }
+  }
+}
+
+
 
 export const userSearchService = new UserSearchService();
