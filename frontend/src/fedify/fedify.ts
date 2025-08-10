@@ -75,7 +75,7 @@ export class FedifyHandler {
                 ...defaultHeaders,
                 ...(options.headers || {}),
                 ...(fedifyHeaders ? this.fedify_headers : {}),
-            }
+            },
         };
 
         try {
@@ -633,14 +633,15 @@ return {
 
     // Follow/unfollow methods updated to support both handle and uri
     followUser = async (handle?: string, uri?: string) => {
+        console.log(handle);
         if (!handle && !uri) {
             throw new Error("Either handle or uri must be provided.");
         }
-        
-        const query = this.buildQueryParams(handle, uri);
-        return this.makeRequest(`${this.API_BASE_URL}/users/following${query}`, {
-            method: "POST",
-        }, 0);
+        const followFormData: FormData = new FormData();
+        followFormData.append('handle', handle!);
+        followFormData.append('activity', 'follow');
+        const body: BodyInit = followFormData;
+        return await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/${handle}/activity`, { method: 'POST',  body: body})
     };
 
     unfollowUser = async (handle?: string, uri?: string) => {
