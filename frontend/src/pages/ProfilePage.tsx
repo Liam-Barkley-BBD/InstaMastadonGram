@@ -56,7 +56,6 @@ interface UserProfile {
 
 const ProfilePage = ({ handle }: Props) => {
   const { user } = useAuth();
-  const isViewingOwnProfile = user?.url === handle;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,10 +65,19 @@ const ProfilePage = ({ handle }: Props) => {
   const [hasMorePosts, setHasMorePosts] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [authLoaded, setAuthLoaded] = useState(false);
   
   const fedifyHandler = useRef(new FedifyHandler());
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (user !== undefined) {
+      setAuthLoaded(true);
+    }
+  }, [user]);
+
+  const isViewingOwnProfile = authLoaded && user?.url === handle;
 
   useEffect(() => {
 
@@ -396,7 +404,9 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
                   </div>
                 </div>
                 <div className="actions">
-                  {!isViewingOwnProfile && <button className="follow-button">Follow</button>}
+                  {authLoaded && !isViewingOwnProfile && (
+                    <button className="follow-button">Follow</button>
+                  )}
                 </div>
               </div>
             </section>
