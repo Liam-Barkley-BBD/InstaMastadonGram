@@ -186,16 +186,6 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, post, profile, onClose })
 
         <div className="post-modal-footer">
           <div className="post-actions">
-            <button className="post-action like">
-              <span className="action-icon">♥</span>
-              <span>{post.likes}</span>
-            </button>
-            {post.shares !== undefined && (
-              <button className="post-action share">
-                <span className="action-icon">↗</span>
-                <span>{post.shares}</span>
-              </button>
-            )}
           </div>
           <div className="post-timestamp">
             {formatDate(post.publishedDate)}

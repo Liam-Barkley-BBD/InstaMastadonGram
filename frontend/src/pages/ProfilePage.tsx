@@ -312,12 +312,6 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
     return (
       <div className="main-content-inner profile-container">
         <main className="profile-page">
-          <header className="profile-header">
-            <button className="back-button">‹</button>
-            <div className="skeleton skeleton-text skeleton-username"></div>
-            <button className="menu-button">⋯</button>
-          </header>
-
           <article className="profile-content">
             <section className="profile-info">
               <figure className="profile-avatar">
@@ -375,12 +369,6 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
     <>
       <div className="main-content-inner profile-container">
         <main className="profile-page">
-          {isProfileTab &&
-          <header className="profile-header">
-            <button className="back-button">‹</button>
-            <h2>{profile.username}</h2>
-            <button className="menu-button">⋯</button>
-          </header>}
 
           <article className="profile-content">
             <section className="profile-info">
@@ -393,7 +381,7 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
               </figure>
               <div className="profile-details">
                 <h1>{profile.displayName || profile.username}</h1>
-                <p className="username">@{profile.username}</p>
+                <p className="username">@{profile.username}@{new URL(profile.id).hostname}</p>
                 <div className="stats">
                   <div className="stat">
                     <strong>{profile.postsCount}</strong>
@@ -407,9 +395,6 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
                     <strong>{profile.followingCount}</strong>
                     <span>Following</span>
                   </div>
-                </div>
-                <div className="bio">
-                  {profile.bio ? <p>{profile.bio}</p> : <p>No bio available</p>}
                 </div>
                 <div className="actions">
                   {!isViewingOwnProfile && <button className="follow-button">Follow</button>}
@@ -432,9 +417,6 @@ const renderMediaContent = (mediaContent: string | PostContent[] | PostContent) 
                           <span className="post-date">
                             {new Date(post.publishedDate).toLocaleDateString()}
                           </span>
-                          <div className="post-stats">
-                            <span>♥ {post.likes}</span>
-                          </div>
                         </div>
                       </article>
                     ))}
