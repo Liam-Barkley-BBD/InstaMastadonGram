@@ -16,6 +16,8 @@ interface Post {
   content: string | PostContent[];
   textcontent?: string | PostContent[];
   imagecontent?: string | PostContent[];
+  videocontent?: string | PostContent[];
+  mediacontent?: string | PostContent[];
   publishedDate: string;
   url: string;
   likes: number;
@@ -52,23 +54,26 @@ const extractTextContent = (content: string | PostContent[]): string => {
   return '';
 };
 
-const getImageContent = (content: string | PostContent[] | PostContent): PostContent | null => {
+const getMediaContent = (content: string | PostContent[] | PostContent): { images: PostContent[], videos: PostContent[] } => {
+  const result = { images: [] as PostContent[], videos: [] as PostContent[] };
+
   if (Array.isArray(content)) {
-    return content.find(item => 
-      (item.type === 'Image' || item.type === 'Document') && 
-      item.mediaType?.startsWith('image/')
-    ) || null;
-  }
-  
-  // Handle single PostContent object
-  if (typeof content === 'object' && content !== null) {
-    if ((content.type === 'Image' || content.type === 'Document') && 
-        content.mediaType?.startsWith('image/')) {
-      return content;
+    content.forEach(item => {
+      if ((item.type === 'Image' || item.type === 'Document') && item.mediaType?.startsWith('image/')) {
+        result.images.push(item);
+      } else if ((item.type === 'Video' || item.type === 'Document') && item.mediaType?.startsWith('video/')) {
+        result.videos.push(item);
+      }
+    });
+  } else if (typeof content === 'object' && content !== null) {
+    if ((content.type === 'Image' || content.type === 'Document') && content.mediaType?.startsWith('image/')) {
+      result.images.push(content);
+    } else if ((content.type === 'Video' || content.type === 'Document') && content.mediaType?.startsWith('video/')) {
+      result.videos.push(content);
     }
   }
-  
-  return null;
+
+  return result;
 };
 
 const formatDate = (dateString: string) => {
@@ -97,7 +102,19 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, post, profile, onClose })
   if (!isOpen || !post || !profile) return null;
 
   const textContent = extractTextContent(post.textcontent || '');
-  const imageContent = getImageContent(post.imagecontent || []);
+  
+  const allMediaContent = [
+    ...(post.imagecontent ? [post.imagecontent] : []),
+    ...(post.videocontent ? [post.videocontent] : []),
+    ...(post.mediacontent ? [post.mediacontent] : [])
+  ];
+
+  const mediaContent = allMediaContent.reduce((acc, content) => {
+    const { images, videos } = getMediaContent(content);
+    acc.images.push(...images);
+    acc.videos.push(...videos);
+    return acc;
+  }, { images: [] as PostContent[], videos: [] as PostContent[] });
 
   return (
     <div className="post-modal-overlay" onClick={onClose}>
@@ -115,12 +132,48 @@ const PostModal: React.FC<PostModalProps> = ({ isOpen, post, profile, onClose })
         </div>
 
         <div className="post-modal-content">
-          {imageContent && (
-            <div className="post-modal-image">
-              <img
-                src={imageContent.url}
-                alt={imageContent.name || 'Post image'}
-              />
+          {/* Render images */}
+          {mediaContent.images.length > 0 && (
+            <div className="post-modal-media">
+              {mediaContent.images.map((image, index) => (
+                <div key={`image-${index}`} className="post-modal-image">
+                  <img
+                    src={image.url}
+                    alt={image.name || `Post image ${index + 1}`}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '70vh',
+                      objectFit: 'contain',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Render videos */}
+          {mediaContent.videos.length > 0 && (
+            <div className="post-modal-media">
+              {mediaContent.videos.map((video, index) => (
+                <div key={`video-${index}`} className="post-modal-video">
+                  <video
+                    src={video.url}
+                    controls
+                    preload="metadata"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '70vh',
+                      objectFit: 'contain',
+                      borderRadius: '8px'
+                    }}
+                    aria-label={video.name || `Post video ${index + 1}`}
+                  >
+                    <source src={video.url} type={video.mediaType} />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+              ))}
             </div>
           )}
 
