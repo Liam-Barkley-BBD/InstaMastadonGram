@@ -132,11 +132,11 @@ const ProfilePage = ({ handle }: Props) => {
         const base = user.url ? user.url.replace(/\/+$/, '') : user.url;
         const followingUrl = `${base}/following?cursor=1`;
 
-      const resp = await fetch(followingUrl, {
-        headers: {
-          Accept: "application/activity+json",
-        },
-      });
+        const resp = await fetch(followingUrl, {
+          headers: {
+            Accept: "application/activity+json",
+          },
+        });
 
         if (!resp.ok) {
           console.warn(`Failed fetching following list: ${resp.status}`);
@@ -145,18 +145,19 @@ const ProfilePage = ({ handle }: Props) => {
         }
 
         const data = await resp.json();
-        const items: string[] = data.orderedItems || data.items || [];
+        const items: string[] = data.orderedItems || [];
 
         const profileNormalized = normalizeUrl(profile.url || profile.id);
-        const found = items.some((item: any) => {
-          // item could be object or string
-          const itemUrl = typeof item === 'string' ? item : (item.url || item.id || '');
+        console.log(profile);
+        console.log(profileNormalized);
+        const found = items.some((itemUrl: string) => {
+          console.log(normalizeUrl(itemUrl));
           return normalizeUrl(itemUrl) === profileNormalized;
         });
 
-        if (!cancelled) setIsFollowing(!!found);
+        if (!cancelled) setIsFollowing(found);
       } catch (err) {
-        console.error('Error checking following status:', err);
+        console.error("Error checking following status:", err);
       } finally {
         if (!cancelled) setIsFollowLoading(false);
       }
@@ -168,6 +169,7 @@ const ProfilePage = ({ handle }: Props) => {
       cancelled = true;
     };
   }, [authLoaded, user, profile, isViewingOwnProfile]);
+
 
   const loadMorePosts = useCallback(async () => {
     if (!profile || loadingMorePosts || !hasMorePosts) return;
