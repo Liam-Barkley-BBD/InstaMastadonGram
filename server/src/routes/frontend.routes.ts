@@ -51,20 +51,26 @@ router.get('/followers', async (req, res) => {
 
 // Get user following
 router.get('/following', async (req, res) => {
-     try {
-        const { handle, uri } = req.query;
-        const maxPages = parseInt(req.query.maxPages as string) || 5; // Allow limiting pages
-        
-        const followingData = await getAllPaginatedItems(
-            uri??`https://mastodon.social/users/${handle}/following`,
-            maxPages
-        );
-        
-        res.json(followingData);
-    } catch (error: any) {
-        console.error('Error fetching following:', error);
-        res.status(500).json({ error: error.message });
-    }
+   try {
+     const { handle, uri } = req.query;
+     const maxPages = parseInt(req.query.maxPages as string) || 5;
+
+     const initialUri =
+       uri || `https://mastodon.social/users/${handle}/following`;
+
+     if (!handle && !uri) {
+       return res
+         .status(400)
+         .json({ error: "Missing `handle` or `uri` parameter." });
+     }
+
+     const followingData = await getAllPaginatedItems(initialUri, maxPages);
+
+     res.json(followingData);
+   } catch (error) {
+     console.error("Error fetching following:", error);
+     res.status(500).json({ error: "Failed to fetch following data." });
+   }
 });
 
 // Get user posts

@@ -335,6 +335,62 @@ router.get('/users', async (req, res) => {
     }
 });
 
+router.get('/followers', async (req, res) => {
+    try {
+        const { q, includeRemote = 'true' } = req.query;
+
+        if (!q || typeof q !== 'string') {
+            return res.status(400).json({ error: 'Query parameter "q" is required' });
+        }
+
+        const results = {
+            query: q,
+            local: [],
+            remote: null,
+            total: 0
+        };
+
+
+        // If no exact local match and query looks like a handle, try WebFinger
+        if (includeRemote === 'true' && (q.includes('@') || q.startsWith('@'))) {
+            try {
+                const remoteProfile = await discoverActorViaWebFinger(q);
+
+                const remoteActor = {
+                    userId: remoteProfile.id,
+                    uri: remoteProfile.id,
+                    handle: remoteProfile.preferredUsername ?
+                        `${remoteProfile.preferredUsername}@${new URL(remoteProfile.id).hostname}` :
+                        q,
+                    inboxUri: remoteProfile.inbox,
+                    displayName: remoteProfile.name,
+                    summary: remoteProfile.summary,
+                    icon: remoteProfile.icon?.url,
+                    followersCount: remoteProfile.followers ?
+                        (typeof remoteProfile.followers === 'string' ? null : remoteProfile.followers.totalItems) :
+                        null,
+                    followingCount: remoteProfile.following ?
+                        (typeof remoteProfile.following === 'string' ? null : remoteProfile.following.totalItems) :
+                        null,
+                    source: 'remote'
+                };
+
+                results.remote = remoteActor as any;
+            } catch (webfingerError:any) {
+                console.warn('WebFinger lookup failed:', webfingerError.message);
+            }
+        }
+
+        results.total = results.local.length + (results.remote ? 1 : 0);
+
+        res.json(results);
+
+    } catch (error:any) {
+        console.error('Error searching users:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get actor profile (local first, then WebFinger if not found)
 router.get('/actor/:handle', async (req, res) => {
     try {
