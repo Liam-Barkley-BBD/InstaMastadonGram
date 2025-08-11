@@ -326,7 +326,7 @@ export class FedifyHandler {
     handle: string
   ): Promise<GetFollowersResponse> => {
     const rawProfile = (await this.makeRequest(
-      `${this.EXPRESS_URL}/${endpoint}?handle=${handle}`,
+      `${this.EXPRESS_URL}/${endpoint}/${handle}`,
       {},
       0,
       false

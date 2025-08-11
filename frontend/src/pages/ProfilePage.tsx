@@ -5,6 +5,7 @@ import { follow } from "../services/activities.service";
 import useAuth from "../services/user.service";
 import PostModal from "../components/PostModal";
 import { Link, useSearchParams } from "react-router-dom";
+import { getFediverseHandle } from "../utils/helper.function";
 
 interface Props {
   handle?: string;
@@ -103,7 +104,7 @@ const ProfilePage = ({ handle }: Props) => {
     if (url[0].size === 1) {
       handle = url[0].get("user") as string;
     }
-    
+
     const fetchProfile = async () => {
       try {
         setLoading(true);
@@ -113,6 +114,7 @@ const ProfilePage = ({ handle }: Props) => {
           undefined,
           handle
         );
+
         setProfile(profileData);
         setPosts(profileData.posts || []);
         setHasMorePosts(profileData.posts?.length === 20);
@@ -127,56 +129,6 @@ const ProfilePage = ({ handle }: Props) => {
 
     fetchProfile();
   }, [handle]);
-
-  // get logged in users follow list
-  useEffect(() => {
-    if (!authLoaded || !user || isViewingOwnProfile) return;
-    if (!profile) return;
-
-    let cancelled = false;
-    const checkFollowingStatus = async () => {
-      setIsFollowLoading(true);
-      setFollowError(null);
-      try {
-        const base = user.url ? user.url.replace(/\/+$/, "") : user.url;
-        const followingUrl = `${base}/following?cursor=1`;
-
-        const resp = await fetch(followingUrl, {
-          headers: {
-            Accept: "application/activity+json",
-          },
-        });
-
-        if (!resp.ok) {
-          console.warn(`Failed fetching following list: ${resp.status}`);
-          if (!cancelled) setIsFollowing(false);
-          return;
-        }
-
-        const data = await resp.json();
-        const items: string[] = data.orderedItems || [];
-
-        const profileNormalized = normalizeUrl(profile.id);
-
-        const found = items.some((itemUrl: string) => {
-          console.log(normalizeUrl(itemUrl));
-          return normalizeUrl(itemUrl) === profileNormalized;
-        });
-
-        if (!cancelled) setIsFollowing(found);
-      } catch (err) {
-        console.error("Error checking following status:", err);
-      } finally {
-        if (!cancelled) setIsFollowLoading(false);
-      }
-    };
-
-    checkFollowingStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoaded, user, profile, isViewingOwnProfile]);
 
   const loadMorePosts = useCallback(async () => {
     if (!profile || loadingMorePosts || !hasMorePosts) return;
@@ -518,7 +470,7 @@ const ProfilePage = ({ handle }: Props) => {
                     <span>Posts</span>
                   </div>
                   <Link
-                    to={`/users/${encodeURIComponent(profile.url)}/followers`}
+                    to={`/users/followers/${getFediverseHandle(profile.url)}`}
                   >
                     <div className="stat">
                       <strong>{profile.followersCount}</strong>
@@ -526,9 +478,7 @@ const ProfilePage = ({ handle }: Props) => {
                     </div>
                   </Link>
                   <Link
-                    to={`/users/${encodeURIComponent(
-                      profile.url
-                    )}/following`}
+                    to={`/users/following/${getFediverseHandle(profile.url)}`}
                   >
                     <div className="stat">
                       <strong>{profile.followingCount}</strong>

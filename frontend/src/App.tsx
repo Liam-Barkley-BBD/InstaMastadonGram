@@ -128,11 +128,11 @@ function App() {
             <Route path="/create" element={<UploadMediaPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route
-              path="/users/:handle/followers"
+              path="/users/followers/:handle"
               element={<FollowersPage isFollowers={true} />}
             />
             <Route
-              path="/users/:handle/following"
+              path="/users/following/:handle"
               element={<FollowersPage isFollowers={false} />}
             />
           </Routes>
