@@ -32,16 +32,10 @@ router.get('/me', async (req: Request, res: Response) => {
 router.post('/:username/activity', async (req: Request, res: Response) => {
   const username = req.params.username;
   const { handle, activity } = req.body;
-
   const domainUsername = extractUsernameAndDomain(handle);
+  const isLocalDomain: boolean = new URL(process.env.DOMAIN!).hostname === domainUsername?.domain;
+  const actorUrl: string = isLocalDomain ? `${process.env.DOMAIN!}/api/` : `https://${domainUsername?.domain}`;
 
-  const externalActorResponse = await fetch(`https://${domainUsername?.domain}/users/${domainUsername?.username}`, {
-    method: 'GET',
-    headers: { 'Accept': 'application/activity+json' }
-  });
-
-  const externalActorInformation = await externalActorResponse.json();
-  
   if (!handle || typeof handle !== 'string') {
     return res.status(400).send('Invalid actor handle or URL');
   }
@@ -50,7 +44,7 @@ router.post('/:username/activity', async (req: Request, res: Response) => {
 
   try {
     const internalContext: Context<ContextData> = federation.createContext(new URL(`${process.env.DOMAIN}`), contextData) as Context<ContextData>;
-    const externalContext: Context<ContextData> = federation.createContext(new URL(externalActorInformation.id), contextData) as Context<ContextData>;
+    const externalContext: Context<ContextData> = federation.createContext(new URL(actorUrl), contextData) as Context<ContextData>;
     const externalActor = await externalContext.lookupObject(handle);
 
     let activityResponse;
