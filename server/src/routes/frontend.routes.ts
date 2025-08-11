@@ -131,9 +131,20 @@ const getAllPaginatedItems = async (initialUrl: any, maxPages: number = 5) => {
             // Handle different response structures
             if (data.type === 'OrderedCollection') {
                 totalItems = data.totalItems || 0;
-                // Get the first page URL
-                currentUrl = data.first;
-                continue;
+                
+                // Check if items are directly in the collection (Mastodon style)
+                if (data.orderedItems && Array.isArray(data.orderedItems) && data.orderedItems.length > 0) {
+                    allItems.push(...data.orderedItems);
+                    pageCount++; // Count this as a page
+                    break; // No pagination needed, all items are here
+                }
+                
+                if (data.first) {
+                    currentUrl = data.first;
+                } else {
+                    break; // No items and no first page
+                }
+                
             } else if (data.type === 'OrderedCollectionPage') {
                 // This is a page with actual items
                 if (data.orderedItems && Array.isArray(data.orderedItems)) {
@@ -141,11 +152,13 @@ const getAllPaginatedItems = async (initialUrl: any, maxPages: number = 5) => {
                 }
                 currentUrl = data.next; // Get next page URL
                 pageCount++;
+                
             } else {
-                // Handle other structures
+                // Handle other structures or plain objects with orderedItems
                 if (data.orderedItems && Array.isArray(data.orderedItems)) {
                     allItems.push(...data.orderedItems);
                 }
+                pageCount++;
                 break;
             }
         } catch (error) {
