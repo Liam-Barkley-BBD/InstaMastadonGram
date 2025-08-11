@@ -130,6 +130,57 @@ const ProfilePage = ({ handle }: Props) => {
     fetchProfile();
   }, [handle]);
 
+  // get logged in users follow list
+  useEffect(() => {
+    if (!authLoaded || !user || isViewingOwnProfile) return;
+    if (!profile) return;
+
+    let cancelled = false;
+    const checkFollowingStatus = async () => {
+      setIsFollowLoading(true);
+      setFollowError(null);
+      try {
+        const base = user.url ? user.url.replace(/\/+$/, "") : user.url;
+        const followingUrl = `${base}/following?cursor=1`;
+
+        const resp = await fetch(followingUrl, {
+          headers: {
+            Accept: "application/activity+json",
+          },
+        });
+
+        if (!resp.ok) {
+          console.warn(`Failed fetching following list: ${resp.status}`);
+          if (!cancelled) setIsFollowing(false);
+          return;
+        }
+
+        const data = await resp.json();
+        const items: string[] = data.orderedItems || [];
+
+        const profileNormalized = normalizeUrl(profile.id);
+        console.log(profile);
+        console.log(profileNormalized);
+        const found = items.some((itemUrl: string) => {
+          console.log(normalizeUrl(itemUrl));
+          return normalizeUrl(itemUrl) === profileNormalized;
+        });
+
+        if (!cancelled) setIsFollowing(found);
+      } catch (err) {
+        console.error("Error checking following status:", err);
+      } finally {
+        if (!cancelled) setIsFollowLoading(false);
+      }
+    };
+
+    checkFollowingStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoaded, user, profile, isViewingOwnProfile]);
+
   const loadMorePosts = useCallback(async () => {
     if (!profile || loadingMorePosts || !hasMorePosts) return;
 
