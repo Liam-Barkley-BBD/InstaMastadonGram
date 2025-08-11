@@ -154,7 +154,7 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
         });
 
         setError(
-          `Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`
+          [`Failed to ${isCurrentlyFollowing ? "unfollow" : "follow"} user`]
         );
       }
     },
