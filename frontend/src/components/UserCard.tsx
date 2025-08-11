@@ -46,20 +46,17 @@ export const UserCard = memo(
           activity: "follow",
         });
       }
-      // Safety check for user URL
       if (!user.url) {
         console.error("User URL is missing");
         return;
       }
 
       try {
-        // Safety check for currentUser
         if (!currentUser?.handle) {
           console.error("Current user handle is missing");
           return;
         }
 
-        // Call the onFollow callback
         onFollow(user.id);
       } catch (error) {
         console.error("Error processing follow action:", error);
@@ -137,7 +134,6 @@ export const UserCard = memo(
   }
 );
 
-// Add display name for debugging
 UserCard.displayName = "UserCard";
 
 UserCard.displayName = "UserCard";

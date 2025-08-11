@@ -2,7 +2,7 @@ import { Router } from "express";
 import Actor from "../models/actor.model.ts";
 import type { ActorDoc } from "../models/actor.model.ts";
 import { client as mongoClient } from "../utils/mongo.ts";
-import { redisClient } from "../utils/redis.ts"; // We'll create this
+import { redisClient } from "../utils/redis.ts";
 import mongoose from "mongoose";
 
 const router = Router();
@@ -13,12 +13,10 @@ const RECENT_SEARCHES_CONFIG = {
     KEY_PREFIX: 'recent_searches:'
 };
 
-// Helper function to get user's recent searches key
 const getUserRecentSearchesKey = (userId: string) => {
     return `${RECENT_SEARCHES_CONFIG.KEY_PREFIX}${userId}`;
 };
 
-// Helper function to safely use Redis (with fallback)
 const safeRedisOperation = async <T>(
     operation: () => Promise<T>,
     fallback: T
@@ -34,25 +32,20 @@ const safeRedisOperation = async <T>(
     }
 };
 
-// Function to add search query to user's recent searches
 const addToRecentSearches = async (userId: string, query: string) => {
     const key = getUserRecentSearchesKey(userId);
 
     await safeRedisOperation(async () => {
-        // Remove the query if it already exists (to move it to front)
         await redisClient.lRem(key, 0, query);
 
-        // Add to the front of the list
         await redisClient.lPush(key, query);
 
-        // Keep only the most recent 10 searches
         await redisClient.lTrim(key, 0, RECENT_SEARCHES_CONFIG.MAX_SEARCHES - 1);
 
         return null;
     }, null);
 };
 
-// Function to get user's recent searches
 const getRecentSearches = async (userId: string): Promise<string[]> => {
     const key = getUserRecentSearchesKey(userId);
 
@@ -62,7 +55,6 @@ const getRecentSearches = async (userId: string): Promise<string[]> => {
     );
 };
 
-// Function to clear user's recent searches
 const clearRecentSearches = async (userId: string) => {
     const key = getUserRecentSearchesKey(userId);
 
@@ -72,9 +64,7 @@ const clearRecentSearches = async (userId: string) => {
     );
 };
 
-// WebFinger discovery function
 const discoverActorViaWebFinger = async (handle: string) => {
-    // Parse handle to extract domain if it's in @user@domain format
     let username: string;
     let domain: string;
 
@@ -137,7 +127,6 @@ const discoverActorViaWebFinger = async (handle: string) => {
     }
 };
 
-// Helper function to find user by handle (exact match)
 export const findUserByHandle = async (handle: string): Promise<ActorDoc | null> => {
     try {
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/yourdb');
@@ -166,7 +155,6 @@ router.get('/recent', async (req, res) => {
     }
 });
 
-// Add a search to user's recent searches
 router.post('/recent', async (req, res) => {
     try {
         const { handle, profile } = req.body;
@@ -189,7 +177,7 @@ router.post('/recent', async (req, res) => {
 // Clear user's recent searches
 router.delete('/recent', async (req, res) => {
     try {
-        const {handle} = req.query; // Assuming you have user authentication middleware
+        const {handle} = req.query;
 
         await clearRecentSearches(handle as string);
 
@@ -201,7 +189,6 @@ router.delete('/recent', async (req, res) => {
     }
 });
 
-// Fuzzy search endpoint for local actors
 router.get('/actors', async (req, res) => {
     try {
         const { q, limit = 10 } = req.query;
@@ -212,11 +199,9 @@ router.get('/actors', async (req, res) => {
 
         await mongoClient.connect();
 
-        // Create text index on handle field if it doesn't exist
         try {
             await Actor.collection.createIndex({ handle: 'text' });
         } catch (indexError) {
-            // Index might already exist, continue
         }
 
         // Perform fuzzy search using multiple strategies
@@ -224,11 +209,8 @@ router.get('/actors', async (req, res) => {
             {
                 $match: {
                     $or: [
-                        // Text search
                         { $text: { $search: q } },
-                        // Regex search for partial matches
                         { handle: { $regex: q, $options: 'i' } },
-                        // Regex search for handles containing the query
                         { handle: { $regex: `.*${q}.*`, $options: 'i' } }
                     ]
                 }
@@ -238,13 +220,9 @@ router.get('/actors', async (req, res) => {
                     // Calculate relevance score
                     relevanceScore: {
                         $add: [
-                            // Case-insensitive exact match
                             { $cond: [{ $eq: [{ $toLower: '$handle' }, { $toLower: q }] }, 100, 0] },
-                            // Starts with query
                             { $cond: [{ $regexMatch: { input: '$handle', regex: `^${q}`, options: 'i' } }, 80, 0] },
-                            // Contains query
                             { $cond: [{ $regexMatch: { input: '$handle', regex: q, options: 'i' } }, 50, 0] },
-                            // Text search score
                             { $ifNull: [{ $meta: 'textScore' }, 0] }
                         ]
                     }
@@ -275,7 +253,6 @@ router.get('/actors', async (req, res) => {
     }
 });
 
-// Search endpoint that combines local search with WebFinger discovery
 router.get('/users', async (req, res) => {
     try {
         const { q, includeRemote = 'true' } = req.query;
@@ -321,7 +298,6 @@ router.get('/users', async (req, res) => {
                 results.remote = remoteActor as any;
             } catch (webfingerError:any) {
                 console.warn('WebFinger lookup failed:', webfingerError.message);
-                // Don't return error, just no remote results
             }
         }
 
@@ -388,7 +364,6 @@ router.get('/actor/:handle', async (req, res) => {
     }
 });
 
-// Save discovered remote actor to local database
 router.post('/actor/save', async (req, res) => {
     try {
         const { handle } = req.body;
@@ -397,7 +372,6 @@ router.post('/actor/save', async (req, res) => {
             return res.status(400).json({ error: 'Handle is required' });
         }
 
-        // Check if already exists with exact match
         const existingActor = await findUserByHandle(handle);
         if (existingActor) {
             return res.json({
@@ -406,10 +380,8 @@ router.post('/actor/save', async (req, res) => {
             });
         }
 
-        // Discover via WebFinger
         const remoteProfile = await discoverActorViaWebFinger(handle);
 
-        // Create new actor record
         const newActor = new Actor({
             userId: remoteProfile.id,
             uri: remoteProfile.id,

@@ -28,13 +28,11 @@ const HomePage: React.FC = () => {
       }
     };
 
-    // Only fetch if we have auth data
     if (auth?.user?.handle) {
       fetchOptimizedFeed();
     }
-  }, [auth?.user?.handle]); // Add dependency on auth data
+  }, [auth?.user?.handle]);
 
-  // Helper function to format timestamp
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
