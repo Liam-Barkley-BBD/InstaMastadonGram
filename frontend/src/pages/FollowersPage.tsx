@@ -136,7 +136,7 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
       const userToFollow = searchResults.find((u) => u.id === userId);
 
       if (!userToFollow?.url || !currentUser?.handle) {
-        setError("Missing required user information");
+        setError(["Missing required user information"]);
         return;
       }
 
