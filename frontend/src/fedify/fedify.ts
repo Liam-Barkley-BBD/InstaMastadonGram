@@ -17,6 +17,21 @@ interface UserProfile {
   publishedDate: string;
 }
 
+interface UserFollowerCard {
+  id: string;
+  username: string;
+  displayName: string;
+  bio: string;
+  url: string;
+  avatar?: string;
+  followersCount: number;
+  followingCount: number;
+  postsCount: number;
+  followers: Follower[];
+  following: Following[];
+  publishedDate: string;
+}
+
 interface Follower {
   id: string;
   username: string;
@@ -249,8 +264,65 @@ export class FedifyHandler {
     return profileData as UserProfile;
   };
 
+  getFollowerProfile = async (
+    handle?: string,
+    uri?: string
+  ): Promise<UserFollowerCard> => {
+    if (!handle && !uri) {
+      throw new Error("Either handle or uri must be provided.");
+    }
+
+    const query = this.buildQueryParams(handle, uri);
+
+    const profilePromise = this.makeRequest(
+      `${this.EXPRESS_URL}/profile${query}`,
+      {},
+      0,
+      false
+    );
+
+    const countsPromise = this.getProfileCounts(handle, uri);
+
+    const [profileResult, countsResult] = await Promise.allSettled([
+      profilePromise,
+      countsPromise,
+    ]);
+
+    let profileData: Partial<UserFollowerCard> = {
+      followersCount: 0,
+      followingCount: 0,
+      postsCount: 0,
+    };
+
+    if (profileResult.status === "fulfilled") {
+      const rawProfile = profileResult.value;
+      profileData = {
+        ...profileData,
+        id: rawProfile.id,
+        username: rawProfile.preferredUsername,
+        displayName: rawProfile.name || rawProfile.preferredUsername,
+        bio: this.stripHtml(rawProfile.summary || ""),
+        url: rawProfile.url,
+        avatar: rawProfile.icon?.url,
+        publishedDate: rawProfile.published,
+      };
+    } else {
+      console.error("Failed to fetch profile data:", profileResult.reason);
+    }
+
+    if (countsResult.status === "fulfilled" && countsResult.value) {
+      profileData.followersCount = countsResult.value.followersCount || 0;
+      profileData.followingCount = countsResult.value.followingCount || 0;
+      profileData.postsCount = countsResult.value.postsCount || 0;
+    } else {
+      console.error("Failed to fetch profile counts");
+    }
+
+    return profileData as UserFollowerCard;
+  };
+
   public getAccountFollowers = async (
-    endpoint: string="followers",
+    endpoint: string = "followers",
     handle: string
   ): Promise<GetFollowersResponse> => {
     const rawProfile = (await this.makeRequest(

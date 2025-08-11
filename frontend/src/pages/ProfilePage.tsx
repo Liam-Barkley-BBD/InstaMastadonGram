@@ -157,8 +157,7 @@ const ProfilePage = ({ handle }: Props) => {
         const items: string[] = data.orderedItems || [];
 
         const profileNormalized = normalizeUrl(profile.id);
-        console.log(profile);
-        console.log(profileNormalized);
+
         const found = items.some((itemUrl: string) => {
           console.log(normalizeUrl(itemUrl));
           return normalizeUrl(itemUrl) === profileNormalized;
@@ -518,13 +517,19 @@ const ProfilePage = ({ handle }: Props) => {
                     <strong>{profile.postsCount}</strong>
                     <span>Posts</span>
                   </div>
-                  <Link to={`/users/${profile.username}/followers`}>
+                  <Link
+                    to={`/users/${encodeURIComponent(profile.url)}/followers`}
+                  >
                     <div className="stat">
                       <strong>{profile.followersCount}</strong>
                       <span>Followers</span>
                     </div>
                   </Link>
-                  <Link to={`/users/${profile.username}/following`}>
+                  <Link
+                    to={`/users/${encodeURIComponent(
+                      profile.url
+                    )}/following`}
+                  >
                     <div className="stat">
                       <strong>{profile.followingCount}</strong>
                       <span>Following</span>

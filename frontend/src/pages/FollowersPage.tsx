@@ -6,7 +6,7 @@ import useAuth from "../services/user.service";
 import { UserCard } from "../components/UserCard";
 import { userSearchService } from "../fedify/searchUsers";
 
-import "./styles/FollowersPage.css"
+import "./styles/FollowersPage.css";
 
 interface GetFollowersResponse {
   orderedItems: string[];
@@ -54,7 +54,7 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
   const [isLoading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [, setError] = useState<string | null>(null);
+  const [, setError] = useState<string[] | null>(null);
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(new Set());
 
   const handleUserClick = useCallback(
@@ -66,6 +66,18 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
     },
     [searchResults, navigate]
   );
+
+  const removeDuplicates = (users:any[]): any[] => {
+    const uniqueUsers = new Map<string, any>();
+
+    for (const user of users) {
+      if (!uniqueUsers.has(user.id)) {
+        uniqueUsers.set(user.id, user);
+      }
+    }
+
+    return Array.from(uniqueUsers.values());
+  };
 
   useEffect(() => {
     if (!handle) return;
@@ -85,29 +97,30 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
         )) as GetFollowersResponse;
 
         const handles = extractHandlesWithUrls(res);
-        const users: any[] = [];
         const errors: any[] = [];
 
-        for (const h of handles) {
+        const promises = handles.map(async (h) => {
           if (controller.signal.aborted) return;
-
           try {
-            const results = await userSearchService.searchUsers(
+            const results = await userSearchService.searchUserFollowers(
               h.handle.slice(1)
             );
 
-            if (results && results.at(0)) {
-              const user = results.at(0);
-              users.push(user);
-              setSearchResults([...users]);
+            const item = results.at(0) !== undefined ? results.at(0) : null;
+            if (results && item) {
+              setSearchResults((prevResults) => {
+
+                return removeDuplicates([...prevResults, item]);
+              });
             }
           } catch (err) {
             errors.push(err);
           }
-        }
+        });
+
+        await Promise.allSettled(promises);
       } catch (err) {
         console.error(err);
-        setSearchResults([]);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -116,12 +129,7 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
     };
 
     fetchFollowers();
-
-    return () => {
-      controller.abort();
-    };
-  }, []);
-
+  }, [handle, isFollowers]);
   const handleFollow = useCallback(
     async (userId: string) => {
       const isCurrentlyFollowing = followingUsers.has(userId);
@@ -153,9 +161,9 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
     [followingUsers, searchResults, currentUser]
   );
 
-const handleBack = () => {
-  navigate(-1);
-}
+  const handleBack = () => {
+    navigate(-1);
+  };
 
   return (
     <div className="page-container">
@@ -195,17 +203,20 @@ const handleBack = () => {
             </div>
           ) : searchResults.length > 0 ? (
             <div className="results-list">
-              {searchResults.map((user: any) => (
-                <UserCard
-                  key={user.id || user.username || Math.random()}
-                  user={user}
-                  isFollowing={followingUsers.has(user.id)}
-                  isLoading={isLoading}
-                  onFollow={handleFollow}
-                  onUserClick={handleUserClick}
-                  currentUser={currentUser}
-                />
-              ))}
+              {searchResults.map((user: any) => {
+                console.log("results", searchResults);
+                return (
+                  <UserCard
+                    key={user.id || user.username || Math.random()}
+                    user={user}
+                    isFollowing={followingUsers.has(user.id)}
+                    isLoading={isLoading}
+                    onFollow={handleFollow}
+                    onUserClick={handleUserClick}
+                    currentUser={currentUser}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="card empty-state">
