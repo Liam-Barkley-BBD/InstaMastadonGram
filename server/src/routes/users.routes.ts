@@ -34,7 +34,7 @@ router.post('/:username/activity', async (req: Request, res: Response) => {
   const { handle, activity } = req.body;
   const domainUsername = extractUsernameAndDomain(handle);
   const isLocalDomain: boolean = new URL(process.env.DOMAIN!).hostname === domainUsername?.domain;
-  const actorUrl: string = isLocalDomain ? `${process.env.DOMAIN!}/api/` : `https://${domainUsername?.domain}`;
+  const actorUrl: string = isLocalDomain ? `https://${domainUsername?.domain}/api` : `https://${domainUsername?.domain}`;
 
   if (!handle || typeof handle !== 'string') {
     return res.status(400).send('Invalid actor handle or URL');
@@ -45,7 +45,7 @@ router.post('/:username/activity', async (req: Request, res: Response) => {
   try {
     const internalContext: Context<ContextData> = federation.createContext(new URL(`${process.env.DOMAIN}`), contextData) as Context<ContextData>;
     const externalContext: Context<ContextData> = federation.createContext(new URL(actorUrl), contextData) as Context<ContextData>;
-    const externalActor = !isLocalDomain ? await externalContext.lookupObject(handle) : await Person.fromJsonLd(await fetchInternalActor(`${actorUrl}/api/users/${domainUsername?.username}`));
+    const externalActor = !isLocalDomain ? await externalContext.lookupObject(handle) : await Person.fromJsonLd(await fetchInternalActor(`${actorUrl}/users/${domainUsername?.username}`));
 
     let activityResponse;
 
