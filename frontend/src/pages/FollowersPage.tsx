@@ -204,7 +204,6 @@ const FollowersPage: React.FC<FollowersPageProps> = ({
           ) : searchResults.length > 0 ? (
             <div className="results-list">
               {searchResults.map((user: any) => {
-                console.log("results", searchResults);
                 return (
                   <UserCard
                     key={user.id || user.username || Math.random()}
