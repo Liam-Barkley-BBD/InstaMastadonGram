@@ -2,7 +2,6 @@ import { createClient } from 'redis';
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
-// Create Redis client with singleton pattern
 export const redisClient = createClient({
     username: 'default',
     password: process.env.REDIS_PASSWORD,
@@ -16,7 +15,6 @@ redisClient.on('error', err => console.log('Redis Client Error', err));
 redisClient.on('connect', () => console.log('Connected to Redis'));
 redisClient.on('disconnect', () => console.log('Disconnected from Redis'));
 
-// Auto-connect when module is imported
 (async () => {
     try {
         await redisClient.connect();
@@ -25,7 +23,6 @@ redisClient.on('disconnect', () => console.log('Disconnected from Redis'));
     }
 })();
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
     console.log('Closing Redis connection...');
     try {

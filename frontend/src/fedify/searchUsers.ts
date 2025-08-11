@@ -22,10 +22,8 @@ class UserSearchService {
         false
       );
 
-      // Process local and remote results
       let processedResults: UserProfile[] = [];
       
-      // Process local results
       if (response.local && response.local.length > 0) {
         for (const localUser of response.local) {
           const profile:any = await this.fedify.getProfile(this.fedify.extractUsername(localUser.handle));

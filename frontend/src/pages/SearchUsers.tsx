@@ -45,7 +45,6 @@ const UserCard = memo(
         const currentUserHandle: string = currentUser.handle;
         const actorHandle: string = actorUrlToHandle(user.id);
 
-        // Safety checks
         if (!user.url || !currentUser?.handle) {
           console.error("Missing required user information");
           return;
@@ -66,7 +65,6 @@ const UserCard = memo(
             });
           }
 
-          // Call the onFollow callback
           onFollow(user.id);
         } catch (error) {
           console.error("Error processing follow action:", error);
@@ -300,13 +298,11 @@ const SearchUsersPage = () => {
     }
   }, []);
 
-  // Handle search input changes
   const handleSearchInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setSearchQuery(value);
 
-      // Show recent searches when input is cleared
       if (!value.trim()) {
         setHasSearched(false);
         setShowRecentSearches(true);
@@ -317,7 +313,6 @@ const SearchUsersPage = () => {
     []
   );
 
-  // Handle Enter key press
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
@@ -338,14 +333,12 @@ const SearchUsersPage = () => {
       }
 
       try {
-        // Optimistically update UI
         setFollowingUsers((prev) => {
           const newSet = new Set(prev);
           isCurrentlyFollowing ? newSet.delete(userId) : newSet.add(userId);
           return newSet;
         });
       } catch {
-        // Revert on error
         setFollowingUsers((prev) => {
           const newSet = new Set(prev);
           isCurrentlyFollowing ? newSet.add(userId) : newSet.delete(userId);
@@ -372,7 +365,6 @@ const SearchUsersPage = () => {
     );
   }
 
-  // Determine what to show based on current state
   const shouldShowRecentSearches =
     showRecentSearches && !hasSearched && recentSearches.length > 0;
   const shouldShowSearchResults = hasSearched && searchResults.length > 0;
