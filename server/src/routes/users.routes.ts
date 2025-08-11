@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import federation from "../services/federation.ts";
-import { Follow, isActor, Undo, type Actor, type Context } from "@fedify/fedify";
+import { Follow, isActor, Person, Undo, type Actor, type Context } from "@fedify/fedify";
 import { isAuthenticated } from "../middleware/authMiddleware.ts";
 import ActivityModel from "../models/activity.model.ts";
 import mongoose from "mongoose";
@@ -45,7 +45,7 @@ router.post('/:username/activity', async (req: Request, res: Response) => {
   try {
     const internalContext: Context<ContextData> = federation.createContext(new URL(`${process.env.DOMAIN}`), contextData) as Context<ContextData>;
     const externalContext: Context<ContextData> = federation.createContext(new URL(actorUrl), contextData) as Context<ContextData>;
-    const externalActor = await externalContext.lookupObject(handle);
+    const externalActor = !isLocalDomain ? await externalContext.lookupObject(handle) : await Person.fromJsonLd(await fetchInternalActor(`${actorUrl}/api/users/${domainUsername?.username}`));
 
     let activityResponse;
 
@@ -55,10 +55,10 @@ router.post('/:username/activity', async (req: Request, res: Response) => {
 
     switch (activity.toLowerCase()) {
       case 'follow':
-        activityResponse = await sendFollow(externalActor, internalContext, username);
+        activityResponse = await sendFollow(externalActor as Actor, internalContext, username);
         break;
       case 'unfollow':
-        activityResponse = await sendUnfollow(externalActor, internalContext, username);
+        activityResponse = await sendUnfollow(externalActor as Actor, internalContext, username);
         break;
     }
 
@@ -144,6 +144,14 @@ type ActivityDetails = {
 interface ContextData {
   session: string;
   actor: string;
+}
+
+const fetchInternalActor = async(url: string) => {
+  const actorResponse = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/activity+json' }
+  })
+  return await actorResponse.json();
 }
 
 export default router;
