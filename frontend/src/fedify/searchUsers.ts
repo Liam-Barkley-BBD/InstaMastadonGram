@@ -16,67 +16,24 @@ class UserSearchService {
 
     try {
       const response = await this.fedify.makeRequest(
-        `${
-          import.meta.env.VITE_BACKEND_URL
-        }/api/search/users?q=${encodeURIComponent(query)}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/search/users?q=${encodeURIComponent(query)}`,
         {},
         0,
         false
       );
 
-      // Process local and remote results
       let processedResults: UserProfile[] = [];
 
-      // Process local results
       if (response.local && response.local.length > 0) {
         for (const localUser of response.local) {
-          const profile: any = await this.fedify.getProfile(
-            this.fedify.extractUsername(localUser.handle)
-          );
+          const profile:any = await this.fedify.getProfile(this.fedify.extractUsername(localUser.handle));
           processedResults.push(profile);
         }
-      } else if (response.remote) {
-        const remoteProfile: any = await this.fedify.getProfile(
-          undefined,
-          response.remote.uri
-        );
+      }  else if (response.remote) {
+        const remoteProfile:any = await this.fedify.getProfile(undefined, response.remote.uri);
         processedResults.push(remoteProfile);
       } else {
-        processedResults = [];
-      }
-
-      return processedResults;
-    } catch (error) {
-      console.error("Search failed:", error);
-      throw new Error("Failed to search users. Please try again.");
-    }
-  }
-
-  async searchUserFollowers(query: string): Promise<UserProfile[]> {
-    if (!query.trim()) {
-      return [];
-    }
-
-    try {
-      const response = await this.fedify.makeRequest(
-        `${
-          import.meta.env.VITE_BACKEND_URL
-        }/api/search/followers?q=${encodeURIComponent(query)}`,
-        {},
-        0,
-        false
-      );
-
-      let processedResults: UserProfile[] = [];
-
-      if (response.remote) {
-        const remoteProfile: any = await this.fedify.getFollowerProfile(
-          undefined,
-          response.remote.uri
-        );
-        processedResults.push(remoteProfile);
-      } else {
-        processedResults = [];
+        processedResults = []
       }
 
       return processedResults;
@@ -88,15 +45,10 @@ class UserSearchService {
 
   async followUser(userId: string): Promise<void> {
     try {
-      await this.fedify.makeRequest(
-        `${this.fedify.EXPRESS_URL}/follow`,
-        {
-          method: "POST",
-          body: JSON.stringify({ userId }),
-        },
-        0,
-        false
-      );
+      await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/follow`, {
+        method: 'POST',
+        body: JSON.stringify({ userId })
+      }, 0, false);
     } catch (error) {
       console.error("Follow action failed:", error);
       throw new Error("Failed to follow user. Please try again.");
@@ -105,63 +57,41 @@ class UserSearchService {
 
   async unfollowUser(userId: string): Promise<void> {
     try {
-      await this.fedify.makeRequest(
-        `${this.fedify.EXPRESS_URL}/unfollow`,
-        {
-          method: "POST",
-          body: JSON.stringify({ userId }),
-        },
-        0,
-        false
-      );
+      await this.fedify.makeRequest(`${this.fedify.EXPRESS_URL}/unfollow`, {
+        method: 'POST',
+        body: JSON.stringify({ userId })
+      }, 0, false);
     } catch (error) {
       console.error("Unfollow action failed:", error);
       throw new Error("Failed to unfollow user. Please try again.");
     }
   }
 
-  async addRecentSearch(
-    handle: string,
-    profile: string
-  ): Promise<{ message: string }> {
-    try {
-      const response = await this.fedify.makeRequest(
-        `${import.meta.env.VITE_BACKEND_URL}/api/search/recent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            handle,
-            profile,
-          }),
-        },
-        0,
-        false
-      );
+  async addRecentSearch(handle: string, profile: string): Promise<{ message: string }> {
+  try {
+    const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        handle,
+        profile
+      })
+    }, 0, false);
 
-      return response;
-    } catch (error) {
-      console.error("Failed to add recent search:", error);
-      throw new Error("Failed to save recent search. Please try again.");
-    }
+    return response;
+  } catch (error) {
+    console.error("Failed to add recent search:", error);
+    throw new Error("Failed to save recent search. Please try again.");
   }
+}
 
-  async getRecentSearches(
-    handle: string
-  ): Promise<{ recent_searches: string[]; count: number }> {
+  async getRecentSearches(handle:string): Promise<{ recent_searches: string[], count: number }> {
     try {
-      const response = await this.fedify.makeRequest(
-        `${
-          import.meta.env.VITE_BACKEND_URL
-        }/api/search/recent?handle=${handle}`,
-        {
-          method: "GET",
-        },
-        0,
-        false
-      );
+      const response = await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent?handle=${handle}`, {
+        method: 'GET'
+      }, 0, false);
       return response;
     } catch (error) {
       console.error("Failed to get recent searches:", error);
@@ -169,23 +99,19 @@ class UserSearchService {
     }
   }
 
-  async clearRecentSearches(handle: string): Promise<void> {
+
+  async clearRecentSearches(handle:string): Promise<void> {
     try {
-      await this.fedify.makeRequest(
-        `${
-          import.meta.env.VITE_BACKEND_URL
-        }/api/search/recent?handle=${handle}`,
-        {
-          method: "DELETE",
-        },
-        0,
-        false
-      );
+      await this.fedify.makeRequest(`${import.meta.env.VITE_BACKEND_URL}/api/search/recent?handle=${handle}`, {
+        method: 'DELETE'
+      }, 0, false);
     } catch (error) {
       console.error("Failed to clear recent searches:", error);
       throw new Error("Failed to clear recent searches. Please try again.");
     }
   }
 }
+
+
 
 export const userSearchService = new UserSearchService();

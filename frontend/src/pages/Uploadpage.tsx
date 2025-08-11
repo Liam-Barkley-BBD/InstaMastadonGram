@@ -17,7 +17,6 @@ const UploadMediaPage = () => {
   const [, setShowAdvanced] = useState<boolean>(false);
   const [location, setLocation] = useState<string>("");
   const [
-    // taggedUsers
     , setTaggedUsers] = useState([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();

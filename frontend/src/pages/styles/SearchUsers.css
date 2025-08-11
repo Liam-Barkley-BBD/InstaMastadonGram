@@ -516,7 +516,7 @@ body {
 
 .clear-search-btn {
   position: absolute;
-  right: 90px; /* Adjust based on your search button width */
+  right: 90px;
   background: none;
   border: none;
   color: #6b7280;

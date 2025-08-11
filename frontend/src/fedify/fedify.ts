@@ -1,6 +1,5 @@
 import type { GetFollowersResponse } from "../types";
 
-// Define interfaces for type safety
 interface UserProfile {
   id: string;
   username: string;
@@ -207,7 +206,6 @@ export class FedifyHandler {
     return this.makeRequest(`${this.API_BASE_URL}/user`, {}, 0);
   };
 
-  // Optimized getProfile - now supports both handle and uri
   getProfile = async (handle?: string, uri?: string): Promise<UserProfile> => {
     if (!handle && !uri) {
       throw new Error("Either handle or uri must be provided.");
@@ -238,7 +236,6 @@ export class FedifyHandler {
       postsCount: 0,
     };
 
-    // Fetch counts and initial posts in parallel
     const [countsData, postsData] = await Promise.allSettled([
       this.getProfileCounts(
         handle,
@@ -249,14 +246,12 @@ export class FedifyHandler {
       this.getPostsPaginated(handle, uri, 1, 20), // Start with page 1, 20 posts
     ]);
 
-    // Handle counts
     if (countsData.status === "fulfilled" && countsData.value) {
       profileData.followersCount = countsData.value.followersCount || 0;
       profileData.followingCount = countsData.value.followingCount || 0;
       profileData.postsCount = countsData.value.postsCount || 0;
     }
 
-    // Handle initial posts
     if (postsData.status === "fulfilled" && postsData.value) {
       profileData.posts = postsData.value.items || [];
     }
@@ -388,7 +383,6 @@ export class FedifyHandler {
     postsPerUser: number = 3
   ): Promise<any> => {
     try {
-      // Step 1: Get following accounts with pagination if needed
       let allFollowing: Following[] = [];
       let page = 1;
       let hasMore = true;
@@ -404,7 +398,6 @@ export class FedifyHandler {
         hasMore = followingResponse.hasNextPage;
         page++;
 
-        // Safety break to prevent infinite loops
         if (page > 5) break;
       }
 
@@ -418,13 +411,11 @@ export class FedifyHandler {
         };
       }
 
-      // Step 2: Shuffle following list and take subset to avoid always fetching from the same users
       const shuffledFollowing = this.shuffleArray(allFollowing).slice(
         0,
         maxFollowingToFetch
       );
 
-      // Step 3: Fetch posts with controlled concurrency
       const allPosts: (Post & {
         sourceUser: string;
         sourceDisplayName: string;
@@ -434,7 +425,6 @@ export class FedifyHandler {
       } = {};
       let successfulFetches = 0;
 
-      // Process in batches to avoid overwhelming the server
       const batchSize = 5;
       for (let i = 0; i < shuffledFollowing.length; i += batchSize) {
         const batch = shuffledFollowing.slice(i, i + batchSize);
@@ -477,23 +467,19 @@ export class FedifyHandler {
 
         await Promise.all(batchPromises);
 
-        // Small delay between batches to be respectful to the server
         if (i + batchSize < shuffledFollowing.length) {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
 
-      // Step 4: Sort by published date (newest first)
       allPosts.sort((a, b) => {
         const dateA = new Date(a.publishedDate).getTime();
         const dateB = new Date(b.publishedDate).getTime();
         return dateB - dateA;
       });
 
-      // Step 5: Take the requested number of posts
       const selectedPosts: any[] = allPosts.slice(0, limit);
 
-      // Step 6: Prepare source information
       const sources = Object.entries(sourceCounts)
         .map(([username, info]) => ({
           username,
@@ -540,7 +526,6 @@ export class FedifyHandler {
     }
   };
 
-  // New paginated posts method - now supports both handle and uri
   getPostsPaginated = async (
     handle?: string,
     uri?: string,
@@ -605,7 +590,6 @@ export class FedifyHandler {
     }
   };
 
-  // Method to load followers when needed - now supports both handle and uri
   getFollowersPaginated = async (
     handle?: string,
     uri?: string,
@@ -662,7 +646,6 @@ export class FedifyHandler {
     }
   };
 
-  // Method to load following when needed - now supports both handle and uri
   getFollowingPaginated = async (
     handle?: string,
     uri?: string,
@@ -774,7 +757,6 @@ export class FedifyHandler {
     }
   };
 
-  // Follow/unfollow methods updated to support both handle and uri
   followUser = async (handle?: string, uri?: string) => {
     console.log(handle);
     if (!handle && !uri) {
@@ -815,7 +797,6 @@ export class FedifyHandler {
     );
   };
 
-  // Create post method updated to support both handle and uri
   createPost = async (content: string, handle?: string, uri?: string) => {
     if (!handle && !uri) {
       throw new Error("Either handle or uri must be provided.");
@@ -833,7 +814,6 @@ export class FedifyHandler {
     );
   };
 
-  // Check following status updated to support both handle and uri
   isFollowing = async (handle?: string, uri?: string) => {
     if (!handle && !uri) {
       throw new Error("Either handle or uri must be provided.");
