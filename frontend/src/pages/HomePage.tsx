@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import {  MessageCircle } from 'lucide-react';
 import './styles/HomePage.css';
 import { FedifyHandler } from '../fedify/fedify';
 import useAuth from '../services/user.service';
@@ -79,24 +78,6 @@ const HomePage: React.FC = () => {
                   />
                 )}
               </section>
-
-              {/* Post Actions */}
-              <footer className="beegram-post-actions">
-                <section className="beegram-action-group">
-                  <button className="beegram-action-btn comment">
-                    <MessageCircle size={24} />
-                    <span>{post.replies}</span>
-                  </button>
-                  <button className="beegram-action-btn share">
-                    <span>↻</span>
-                    <span>{post.shares}</span>
-                  </button>
-                  <button className="beegram-action-btn like">
-                    <span>♥</span>
-                    <span>{post.likes}</span>
-                  </button>
-                </section>
-              </footer>
 
               {/* Post Stats and Description */}
               <section className="beegram-post-stats">
